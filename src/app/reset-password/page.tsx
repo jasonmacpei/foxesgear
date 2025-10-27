@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="container max-w-md py-12 text-sm text-muted-foreground">Loading…</div>}>
+      <ResetPasswordInner />
+    </Suspense>
+  );
+}
+
+function ResetPasswordInner() {
   const params = useSearchParams();
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "ready" | "updating" | "done" | "error">("idle");
