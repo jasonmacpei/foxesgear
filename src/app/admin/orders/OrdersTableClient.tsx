@@ -24,10 +24,11 @@ export default function OrdersTableClient({ orders }: { orders: Order[] }) {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      const orderId = selectedOrder.id; // capture to satisfy TS narrowing
       const { data } = await supabase
         .from("order_items")
         .select("product_name, size_value, color_value, quantity, unit_price_cents, line_total_cents")
-        .eq("order_id", selectedOrder.id)
+        .eq("order_id", orderId)
         .order("product_name");
       if (!cancelled) {
         setItems(data ?? []);
