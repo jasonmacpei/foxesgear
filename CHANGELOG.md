@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.4](https://github.com/jasonmacpei/foxesgear/compare/v0.0.3...v0.0.4) (2025-10-27)
+
+
+### Features
+
+* **ui:** center and enlarge toast notifications for visibility ([4e8bdba](https://github.com/jasonmacpei/foxesgear/commit/4e8bdbacec5feda77dbcf4f2a858d41e6604ad73))
+
 ### [0.0.3](https://github.com/jasonmacpei/foxesgear/compare/v0.0.2...v0.0.3) (2025-10-27)
 
 
