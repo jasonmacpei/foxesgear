@@ -38,6 +38,10 @@ export default async function AdminOrdersPage({
   return (
     <div>
       <h2 className="mb-4 text-2xl font-semibold">Orders</h2>
+      {/* Simple Atlantic timezone formatter */}
+      {(() => {
+        return null;
+      })()}
       <div className="mb-4 flex flex-wrap gap-2">
         {tabs.map((t) => (
           <a
@@ -106,8 +110,28 @@ export default async function AdminOrdersPage({
                   </span>
                 </td>
                 <td className="px-4 py-2">${(o.amount_total_cents / 100).toFixed(2)}</td>
-                <td className="px-4 py-2 text-muted-foreground">{o.paid_at ?? "-"}</td>
-                <td className="px-4 py-2 text-muted-foreground">{o.created_at}</td>
+                <td className="px-4 py-2 text-muted-foreground">{
+                  o.paid_at
+                    ? new Date(o.paid_at).toLocaleString("en-CA", {
+                        timeZone: "America/Halifax",
+                        year: "numeric",
+                        month: "short",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "-"
+                }</td>
+                <td className="px-4 py-2 text-muted-foreground">{
+                  new Date(o.created_at).toLocaleString("en-CA", {
+                    timeZone: "America/Halifax",
+                    year: "numeric",
+                    month: "short",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                }</td>
               </tr>
             ))}
           </tbody>
