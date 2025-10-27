@@ -39,13 +39,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div className="pointer-events-none fixed inset-0 z-[100] flex items-start justify-end p-4 sm:p-6">
-        <div className="flex w-full max-w-sm flex-col gap-2">
+      <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div className="flex w-full max-w-md sm:max-w-lg flex-col gap-3">
           {toasts.map((t) => (
             <div
               key={t.id}
               className={[
-                "pointer-events-auto w-full rounded-md border px-4 py-3 shadow-md",
+                "pointer-events-auto w-full rounded-md border px-5 py-4 sm:px-6 sm:py-5 shadow-lg",
                 "bg-card text-foreground border-border",
                 t.variant === "success" ? "border-emerald-400/50" : "",
                 t.variant === "error" ? "border-red-400/50" : "",
@@ -53,9 +53,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               role="status"
               aria-live="polite"
             >
-              {t.title ? <div className="text-sm font-semibold">{t.title}</div> : null}
+              {t.title ? <div className="text-base font-semibold sm:text-lg">{t.title}</div> : null}
               {t.description ? (
-                <div className="mt-0.5 text-sm text-muted-foreground">{t.description}</div>
+                <div className="mt-1 text-sm sm:text-base text-muted-foreground">{t.description}</div>
               ) : null}
             </div>
           ))}
