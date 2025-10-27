@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import OrdersTableClient from "./OrdersTableClient";
 
 type Status = "pending" | "paid" | "fulfilled" | "cancelled";
 type EnvFilter = "all" | "prod" | "test";
@@ -13,20 +14,21 @@ export default async function AdminOrdersPage({
 
   let query = supabaseAdmin
     .from("orders")
-    .select("id, email, payment_method, status, amount_total_cents, paid_at, created_at, is_test")
+    .select("id, email, payment_method, status, amount_total_cents, paid_at, created_at, is_test, stripe_session_id")
     .order("created_at", { ascending: false });
 
   if (status) {
     query = query.eq("status", status);
   }
 
-  if (env === "prod") {
-    query = query.eq("is_test", false);
-  } else if (env === "test") {
-    query = query.eq("is_test", true);
-  }
+  const { data: rawOrders } = await query;
 
-  const { data: orders } = await query;
+  const orders = (rawOrders ?? []).filter((o: any) => {
+    const isTest = Boolean(o.is_test) || (o.stripe_session_id?.startsWith("cs_test_") ?? false);
+    if (env === "prod") return !isTest;
+    if (env === "test") return isTest;
+    return true;
+  });
 
   const tabs: Status[] = ["pending", "paid", "fulfilled", "cancelled"];
   const envTabs: { key: EnvFilter; label: string }[] = [
@@ -68,75 +70,7 @@ export default async function AdminOrdersPage({
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/60 text-muted-foreground">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium">Order</th>
-              <th className="px-4 py-2 text-left font-medium">Email</th>
-              <th className="px-4 py-2 text-left font-medium">Payment</th>
-              <th className="px-4 py-2 text-left font-medium">Status</th>
-              <th className="px-4 py-2 text-left font-medium">Total</th>
-              <th className="px-4 py-2 text-left font-medium">Paid</th>
-              <th className="px-4 py-2 text-left font-medium">Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(orders ?? []).map((o) => (
-              <tr key={o.id} className="border-t border-border">
-                <td className="px-4 py-2 text-muted-foreground">
-                  {o.id.slice(0, 8)}
-                  {o.is_test ? (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-medium text-yellow-800">
-                      Test
-                    </span>
-                  ) : null}
-                </td>
-                <td className="px-4 py-2">{o.email}</td>
-                <td className="px-4 py-2 capitalize">{o.payment_method}</td>
-                <td className="px-4 py-2 capitalize">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      o.status === "paid"
-                        ? "bg-primary/10 text-foreground"
-                        : o.status === "fulfilled"
-                          ? "bg-muted text-foreground"
-                          : o.status === "pending"
-                            ? "bg-muted text-muted-foreground"
-                            : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {o.status}
-                  </span>
-                </td>
-                <td className="px-4 py-2">${(o.amount_total_cents / 100).toFixed(2)}</td>
-                <td className="px-4 py-2 text-muted-foreground">{
-                  o.paid_at
-                    ? new Date(o.paid_at).toLocaleString("en-CA", {
-                        timeZone: "America/Halifax",
-                        year: "numeric",
-                        month: "short",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "-"
-                }</td>
-                <td className="px-4 py-2 text-muted-foreground">{
-                  new Date(o.created_at).toLocaleString("en-CA", {
-                    timeZone: "America/Halifax",
-                    year: "numeric",
-                    month: "short",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                }</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <OrdersTableClient orders={orders} />
     </div>
   );
 }
