@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.3](https://github.com/jasonmacpei/foxesgear/compare/v0.0.2...v0.0.3) (2025-10-27)
+
+
+### Features
+
+* **admin/orders:** client modal to view order items; fix env filter by deriving from id + flag ([5c2cce3](https://github.com/jasonmacpei/foxesgear/commit/5c2cce3c115adf06c4c8fbf792666a3a3467ef09))
+* **admin/orders:** format dates in Atlantic timezone and friendlier ([610775c](https://github.com/jasonmacpei/foxesgear/commit/610775c1d6f11f3e157d9f452ec8a290b22399a5))
+* **admin/orders:** use service client and add env toggle for test/non-test; show test badge ([087f89d](https://github.com/jasonmacpei/foxesgear/commit/087f89d3ef8370aaa5816230e407a5664718eaee))
+* **cart:** add toast feedback on add-to-cart ([951c3d2](https://github.com/jasonmacpei/foxesgear/commit/951c3d2785fe2195b0861e0f68d86977d5024376))
+* **orders:** store stripe_charge_id and fee/net cents; enhance webhook to fetch from payment_intent ([8b130a3](https://github.com/jasonmacpei/foxesgear/commit/8b130a399a5c050585359cc2732508a02b21d3e7))
+* **reports:** add printer CSV endpoint and on-page previews; add sales CSV with Stripe fee summary ([001bbb3](https://github.com/jasonmacpei/foxesgear/commit/001bbb3372166cb7173fa9002b3b603b1abe8364))
+* **reports:** add total revenue row and optional Stripe fee summary on page ([39182e7](https://github.com/jasonmacpei/foxesgear/commit/39182e7781371e33570c3bf970a6fe514c74d614))
+
+
+### Bug Fixes
+
+* **admin/orders:** avoid nullable access by passing orderId param to loader ([d46fad6](https://github.com/jasonmacpei/foxesgear/commit/d46fad6d3f0a723f933eeaa5bf4f351d902d0fbc))
+* **admin/orders:** default env filter to All to avoid empty list on first load ([750a75b](https://github.com/jasonmacpei/foxesgear/commit/750a75b2d94f36d1ef2bb77605c983bd4822e8ef))
+* **admin/orders:** force-dynamic to avoid caching and ensure fresh fetch ([d59e228](https://github.com/jasonmacpei/foxesgear/commit/d59e2282ccea5882c91d5a92861b9bd4b3f9fff3))
+* **admin/orders:** satisfy TS narrowing for selectedOrder in effect ([f51f50c](https://github.com/jasonmacpei/foxesgear/commit/f51f50c393197e707b120e6b90ee3f4a1ba6c649))
+* **email:** remove product link from line items to prevent URL rendering ([0693743](https://github.com/jasonmacpei/foxesgear/commit/06937430bfec3fda8392119aaabdc9b52356f9bf))
+* **email:** use replyTo property for Resend API ([29da42d](https://github.com/jasonmacpei/foxesgear/commit/29da42d5b30560960f2f6e15220eb27c70530c0b))
+
 ### [0.0.2](https://github.com/jasonmacpei/foxesgear/compare/v0.0.1...v0.0.2) (2025-10-27)
 
 
