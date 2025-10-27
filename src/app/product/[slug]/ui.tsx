@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useCartStore } from "@/store/cart";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 type Variant = { id: string; size_value: string | null; color_value: string | null; price_cents: number };
 
@@ -43,6 +44,7 @@ export function AddToCart({
   const [color, setColor] = useState<string | null>(colors[0] ?? null);
   const [quantity, setQuantity] = useState(1);
   const add = useCartStore((s) => s.addItem);
+  const { show } = useToast();
 
   const activeVariant = useMemo(() => {
     return variants.find((v) => (v.size_value ?? null) === size && (v.color_value ?? null) === color);
@@ -59,6 +61,11 @@ export function AddToCart({
       color,
       unitPriceCents: price,
       quantity,
+    });
+    show({
+      variant: "success",
+      title: "Added to cart",
+      description: `${productName}${size ? ` · ${size}` : ""}${color ? ` · ${color}` : ""}`,
     });
   }
 

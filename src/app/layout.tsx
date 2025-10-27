@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PreorderBanner } from "@/components/PreorderBanner";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,17 +50,19 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground font-sans`}
       >
-        <div className="relative flex min-h-dvh flex-col">
-          {/* Preorder banner */}
-          <PreorderBanner />
-          <Header />
-          <main className="flex-1">
-            <div className="container py-8 sm:py-10 md:py-12">
-              {children}
-            </div>
-          </main>
-          <Footer />
-        </div>
+        <ToastProvider>
+          <div className="relative flex min-h-dvh flex-col">
+            {/* Preorder banner */}
+            <PreorderBanner />
+            <Header />
+            <main className="flex-1">
+              <div className="container py-8 sm:py-10 md:py-12">
+                {children}
+              </div>
+            </main>
+            <Footer />
+          </div>
+        </ToastProvider>
       </body>
     </html>
   );
