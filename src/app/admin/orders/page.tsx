@@ -12,7 +12,7 @@ export default async function AdminOrdersPage({
   searchParams: { status?: Status; env?: EnvFilter };
 }) {
   const status = (searchParams.status ?? "paid") as Status;
-  const env = (searchParams.env ?? "prod") as EnvFilter;
+  const env = (searchParams.env ?? "all") as EnvFilter;
 
   let query = supabaseAdmin
     .from("orders")
