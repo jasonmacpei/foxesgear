@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.2](https://github.com/jasonmacpei/foxesgear/compare/v0.0.1...v0.0.2) (2025-10-27)
+
+
+### Features
+
+* **email): styled receipt with logo, items, variants, reply-to; fix(webhook): expand price.product and persist size/color; feat(order): add is_test; feat(success): clear cart on success; feat(checkout:** include product slug in metadata ([3d7675f](https://github.com/jasonmacpei/foxesgear/commit/3d7675f842b4c4ec1dfe7587840d70d181284ebe))
+
 ### 0.0.1 (2025-10-27)
 
 
