@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
   if (typed.type === "checkout.session.completed") {
     const session = typed.data.object as Stripe.Checkout.Session;
     const email = session.customer_details?.email ?? session.customer_email ?? "";
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+    // Expand product so we can read product_data.metadata (size/color/slug)
+    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+      expand: ["data.price.product"],
+    });
     const meta = (session.metadata ?? {}) as Record<string, string>;
 
     // Compute totals and persist
@@ -45,24 +48,40 @@ export async function POST(req: NextRequest) {
         status: "paid",
         amount_total_cents: amountTotal,
         stripe_session_id: session.id,
+        is_test: !(session.livemode ?? false),
         paid_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (orderErr || !order) {
-      return NextResponse.json({ error: "order_insert_failed" }, { status: 500 });
+      console.error("order_insert_failed", orderErr);
+      return NextResponse.json({ error: "order_insert_failed", detail: orderErr?.message }, { status: 500 });
     }
+
+    // Also accumulate items to include in the email
+    const itemsForEmail: {
+      productName: string;
+      size?: string | null;
+      color?: string | null;
+      qty: number;
+      unitPrice: number;
+      lineTotal: number;
+      slug?: string | null;
+    }[] = [];
 
     for (const li of lineItems.data) {
       // Best-effort extraction of metadata
       const productName = li.description ?? "Item";
       const unitPrice = li.price?.unit_amount ?? 0;
       const qty = li.quantity ?? 1;
-      const size = (li.price?.product as unknown as { metadata?: Record<string, string> })?.metadata?.size ??
-        (li as unknown as { metadata?: Record<string, string> })?.metadata?.size ?? null;
-      const color = (li.price?.product as unknown as { metadata?: Record<string, string> })?.metadata?.color ??
-        (li as unknown as { metadata?: Record<string, string> })?.metadata?.color ?? null;
+      const priceProduct = li.price?.product as unknown as { metadata?: Record<string, string> } | string | null | undefined;
+      const metaFromProduct = typeof priceProduct === "object" && priceProduct !== null ? priceProduct.metadata ?? {} : {};
+      const metaFromLine = (li as unknown as { metadata?: Record<string, string> })?.metadata ?? {};
+      const mergedMeta = { ...metaFromProduct, ...metaFromLine } as Record<string, string>;
+      const size = mergedMeta.size ?? null;
+      const color = mergedMeta.color ?? null;
+      const slug = mergedMeta.slug ?? null;
 
       await supabaseAdmin.from("order_items").insert({
         order_id: order.id,
@@ -73,16 +92,93 @@ export async function POST(req: NextRequest) {
         unit_price_cents: unitPrice,
         line_total_cents: unitPrice * qty,
       });
+
+      itemsForEmail.push({
+        productName,
+        size,
+        color,
+        qty,
+        unitPrice,
+        lineTotal: unitPrice * qty,
+        slug,
+      });
     }
 
     const from = process.env.RESEND_FROM;
     if (from && email) {
-      await resend.emails.send({
-        from,
-        to: email,
-        subject: "FoxesGear Order Confirmation",
-        html: `<p>Thanks for your order! We'll email pickup details soon.</p><p>Order total: $${(amountTotal / 100).toFixed(2)}</p>`,
-      });
+      try {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+        const logoUrl = `${siteUrl}/Stratford%20Foxes%20Logo%202.png`;
+
+        const currency = "CAD";
+        const rowsHtml = itemsForEmail
+          .map((it) => {
+            const variantBits = [it.size ? `Size: ${it.size}` : null, it.color ? `Color: ${it.color}` : null]
+              .filter(Boolean)
+              .join(" · ");
+            const nameCell = it.slug
+              ? `<a href=\\"${siteUrl}/product/${it.slug}\\" style=\\"color:#111827;text-decoration:none\\">${it.productName}</a>`
+              : it.productName;
+            return `
+              <tr>
+                <td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#111827\">${nameCell}${variantBits ? `<div style=\\"color:#6b7280;font-size:12px\\">${variantBits}</div>` : ""}</td>
+                <td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#111827;text-align:center\">${it.qty}</td>
+                <td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#111827;text-align:right\">$${(it.unitPrice / 100).toFixed(2)}</td>
+                <td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#111827;text-align:right\">$${(it.lineTotal / 100).toFixed(2)}</td>
+              </tr>`;
+          })
+          .join("");
+
+        const customerBlock = `
+          <div style=\"margin:16px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb\">
+            <div style=\"font-weight:600;margin-bottom:6px\">Customer</div>
+            <div style=\"color:#111827\">${meta.customer_name ?? ""}</div>
+            <div style=\"color:#6b7280\">${email}</div>
+            <div style=\"margin-top:8px;color:#111827\">Affiliated Player: ${meta.affiliated_player ?? ""}</div>
+            <div style=\"color:#111827\">Group: ${meta.affiliated_group ?? ""}</div>
+            <div style=\"color:#111827\">Phone: ${meta.phone ?? ""}</div>
+          </div>`;
+
+        const html = `
+          <div style=\"font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#111827\">
+            <div style=\"text-align:center;margin-bottom:16px\">
+              <img src=\"${logoUrl}\" alt=\"Stratford Foxes\" style=\"max-width:160px;height:auto\" />
+            </div>
+            <h2 style=\"margin:0 0 4px;font-size:20px\">Thanks for your order!</h2>
+            <p style=\"margin:0 0 16px;color:#6b7280\">We'll email pickup details soon.</p>
+            ${customerBlock}
+            <table cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"border-collapse:collapse;background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden\">
+              <thead>
+                <tr style=\"background:#f9fafb;color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:.02em\">
+                  <th align=\"left\" style=\"padding:10px 12px;border-bottom:1px solid #e5e7eb\">Item</th>
+                  <th style=\"padding:10px 12px;border-bottom:1px solid #e5e7eb\">Qty</th>
+                  <th align=\"right\" style=\"padding:10px 12px;border-bottom:1px solid #e5e7eb\">Price</th>
+                  <th align=\"right\" style=\"padding:10px 12px;border-bottom:1px solid #e5e7eb\">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan=\"3\" style=\"padding:12px;color:#111827;text-align:right;font-weight:600\">Order total</td>
+                  <td style=\"padding:12px;color:#111827;text-align:right;font-weight:700\">$${(amountTotal / 100).toFixed(2)} ${currency}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>`;
+
+        await resend.emails.send({
+          from,
+          to: email,
+          reply_to: "stratfordfoxes@gmail.com",
+          subject: "FoxesGear Order Confirmation",
+          html,
+        });
+      } catch (mailErr) {
+        // Log but do not fail the webhook; Stripe will consider this delivered
+        console.error("resend_send_failed", mailErr);
+      }
     }
   }
 

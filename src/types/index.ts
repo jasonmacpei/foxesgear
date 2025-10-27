@@ -42,6 +42,7 @@ export type Order = {
   status: "pending" | "paid" | "fulfilled" | "cancelled";
   amount_total_cents: number;
   stripe_session_id?: string | null;
+  is_test: boolean;
   paid_at?: string | null;
 };
 

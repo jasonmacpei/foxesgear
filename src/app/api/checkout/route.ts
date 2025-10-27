@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const productIds = Array.from(new Set((variants ?? []).map((v) => v.product_id)));
   const { data: products, error: productsErr } = await supabase
     .from("products")
-    .select("id, name, active")
+    .select("id, name, slug, active")
     .in("id", productIds);
   if (productsErr) {
     return NextResponse.json({ error: "product_fetch_failed" }, { status: 500 });
@@ -64,7 +64,11 @@ export async function POST(req: NextRequest) {
   const variantIdToVariant = new Map<string, any>();
   (variants ?? []).forEach((v) => variantIdToVariant.set(v.id, v));
   const productIdToName = new Map<string, string>();
-  (products ?? []).forEach((p) => productIdToName.set(p.id, p.name));
+  const productIdToSlug = new Map<string, string>();
+  (products ?? []).forEach((p: any) => {
+    productIdToName.set(p.id, p.name);
+    productIdToSlug.set(p.id, p.slug);
+  });
 
   // Build trusted Stripe line items
   const lineItems = [] as any[];
@@ -80,6 +84,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "color_mismatch" }, { status: 400 });
     }
     const productName = productIdToName.get(v.product_id) ?? item.productName;
+    const productSlug = productIdToSlug.get(v.product_id) ?? "";
     lineItems.push({
       quantity: item.quantity,
       price_data: {
@@ -91,6 +96,7 @@ export async function POST(req: NextRequest) {
             variantId: item.variantId,
             size: v.size_value ?? "",
             color: v.color_value ?? "",
+            slug: productSlug,
           },
         },
       },

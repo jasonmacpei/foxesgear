@@ -35,6 +35,7 @@ create table if not exists orders (
   status text not null default 'pending',
   amount_total_cents int not null,
   stripe_session_id text,
+  is_test boolean not null default false,
   paid_at timestamptz,
   created_at timestamptz default now()
 );
