@@ -116,9 +116,7 @@ export async function POST(req: NextRequest) {
             const variantBits = [it.size ? `Size: ${it.size}` : null, it.color ? `Color: ${it.color}` : null]
               .filter(Boolean)
               .join(" · ");
-            const nameCell = it.slug
-              ? `<a href=\\"${siteUrl}/product/${it.slug}\\" style=\\"color:#111827;text-decoration:none\\">${it.productName}</a>`
-              : it.productName;
+            const nameCell = it.productName;
             return `
               <tr>
                 <td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#111827\">${nameCell}${variantBits ? `<div style=\\"color:#6b7280;font-size:12px\\">${variantBits}</div>` : ""}</td>
