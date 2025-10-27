@@ -59,6 +59,48 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "order_insert_failed", detail: orderErr?.message }, { status: 500 });
     }
 
+    // Best-effort: fetch charge + fees and update order
+    try {
+      const pi = await stripe.paymentIntents.retrieve(String(session.payment_intent), {
+        expand: ["latest_charge.balance_transaction"],
+      });
+      const latestCharge = (pi as any)?.latest_charge as
+        | (Stripe.Charge & { balance_transaction?: Stripe.BalanceTransaction | string })
+        | string
+        | undefined;
+      let chargeId: string | null = null;
+      let feeCents: number | null = null;
+      let netCents: number | null = null;
+
+      if (typeof latestCharge === "string") {
+        chargeId = latestCharge;
+        const ch = await stripe.charges.retrieve(latestCharge, { expand: ["balance_transaction"] });
+        const bt = (ch.balance_transaction as Stripe.BalanceTransaction | null) ?? null;
+        if (bt) {
+          feeCents = bt.fee ?? null;
+          netCents = bt.net ?? null;
+        }
+      } else if (latestCharge && typeof latestCharge === "object") {
+        chargeId = latestCharge.id;
+        const bt = latestCharge.balance_transaction as Stripe.BalanceTransaction | string | undefined;
+        if (bt && typeof bt !== "string") {
+          feeCents = bt.fee ?? null;
+          netCents = bt.net ?? null;
+        } else if (typeof bt === "string") {
+          const btr = await stripe.balanceTransactions.retrieve(bt);
+          feeCents = btr.fee ?? null;
+          netCents = btr.net ?? null;
+        }
+      }
+
+      await supabaseAdmin
+        .from("orders")
+        .update({ stripe_charge_id: chargeId, stripe_fee_cents: feeCents, stripe_net_cents: netCents })
+        .eq("id", order.id);
+    } catch (e) {
+      console.error("stripe_fee_fetch_failed", e);
+    }
+
     // Also accumulate items to include in the email
     const itemsForEmail: {
       productName: string;
