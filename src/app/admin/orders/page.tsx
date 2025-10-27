@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import OrdersTableClient from "./OrdersTableClient";
 
+export const dynamic = "force-dynamic";
+
 type Status = "pending" | "paid" | "fulfilled" | "cancelled";
 type EnvFilter = "all" | "prod" | "test";
 
