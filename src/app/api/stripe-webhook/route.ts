@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from,
           to: email,
-          reply_to: "stratfordfoxes@gmail.com",
+          replyTo: "stratfordfoxes@gmail.com",
           subject: "FoxesGear Order Confirmation",
           html,
         });
