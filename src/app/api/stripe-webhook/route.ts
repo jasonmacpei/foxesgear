@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     const session = typed.data.object as Stripe.Checkout.Session;
     const email = session.customer_details?.email ?? session.customer_email ?? "";
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+    const meta = (session.metadata ?? {}) as Record<string, string>;
 
     // Compute totals and persist
     const amountTotal = session.amount_total ?? 0;
@@ -36,6 +37,10 @@ export async function POST(req: NextRequest) {
       .from("orders")
       .insert({
         email,
+        customer_name: meta.customer_name ?? "",
+        affiliated_player: meta.affiliated_player ?? "",
+        affiliated_group: meta.affiliated_group ?? "",
+        phone: meta.phone ?? "",
         payment_method: "stripe",
         status: "paid",
         amount_total_cents: amountTotal,

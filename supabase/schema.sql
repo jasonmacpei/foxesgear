@@ -27,6 +27,10 @@ create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete set null,
   email text not null,
+  customer_name text not null,
+  affiliated_player text not null,
+  affiliated_group text not null,
+  phone text not null,
   payment_method text not null,
   status text not null default 'pending',
   amount_total_cents int not null,
@@ -34,6 +38,21 @@ create table if not exists orders (
   paid_at timestamptz,
   created_at timestamptz default now()
 );
+
+-- Optional: constrain affiliated_group to known values
+-- alter table orders
+--   add constraint chk_affiliated_group
+--   check (affiliated_group in (
+--     'Tykes - Kindegarden',
+--     'Small Ball Girls (Gr 1-2)',
+--     'Small Ball Boys (Gr 1-2)',
+--     'Jr Mini Girls (Gr 3-4)',
+--     'Jr Mini Boys (Gr 3-4)',
+--     'Mini Girls House (Gr 5-6)',
+--     'Mini Boys House (Gr 5-6)',
+--     'Mini Girls Rep (Gr 5-6)',
+--     'Mini Boys Rep (Gr 5-6)'
+--   ));
 
 -- Order items
 create table if not exists order_items (

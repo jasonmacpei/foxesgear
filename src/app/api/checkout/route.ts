@@ -12,17 +12,35 @@ const ItemSchema = z.object({
   quantity: z.number().int().positive(),
 });
 
+const CustomerSchema = z.object({
+  name: z.string().min(1),
+  affiliatedPlayer: z.string().min(1),
+  affiliatedGroup: z.enum([
+    "Tykes - Kindegarden",
+    "Small Ball Girls (Gr 1-2)",
+    "Small Ball Boys (Gr 1-2)",
+    "Jr Mini Girls (Gr 3-4)",
+    "Jr Mini Boys (Gr 3-4)",
+    "Mini Girls House (Gr 5-6)",
+    "Mini Boys House (Gr 5-6)",
+    "Mini Girls Rep (Gr 5-6)",
+    "Mini Boys Rep (Gr 5-6)",
+  ]),
+  phone: z.string().min(1),
+  email: z.string().email(),
+});
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const parse = z
-    .object({ items: z.array(ItemSchema).min(1) })
+    .object({ items: z.array(ItemSchema).min(1), customer: CustomerSchema })
     .safeParse(body);
   if (!parse.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
   // Server-side validation: fetch variants and trusted prices/names
-  const items = parse.data.items;
+  const { items, customer } = parse.data;
   const variantIds = Array.from(new Set(items.map((i) => i.variantId)));
 
   // Fetch variants
@@ -83,6 +101,13 @@ export async function POST(req: NextRequest) {
     mode: "payment",
     payment_method_types: ["card"],
     line_items: lineItems,
+    customer_email: customer.email,
+    metadata: {
+      customer_name: customer.name,
+      affiliated_player: customer.affiliatedPlayer,
+      affiliated_group: customer.affiliatedGroup,
+      phone: customer.phone,
+    },
     success_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/success`,
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/checkout`,
   });

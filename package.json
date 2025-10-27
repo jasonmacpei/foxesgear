@@ -11,10 +11,11 @@
     "format:check": "prettier --check .",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
-    "release:patch": "npm version patch -m \"chore(release): v%s\"",
-    "release:minor": "npm version minor -m \"chore(release): v%s\"",
-    "release:major": "npm version major -m \"chore(release): v%s\"",
-    "postversion": "git push --follow-tags"
+    "release:first": "standard-version --first-release && git push --follow-tags",
+    "release": "standard-version && git push --follow-tags",
+    "release:patch": "standard-version --release-as patch && git push --follow-tags",
+    "release:minor": "standard-version --release-as minor && git push --follow-tags",
+    "release:major": "standard-version --release-as major && git push --follow-tags"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -43,6 +44,7 @@
     "eslint-config-prettier": "^10.1.8",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
+    "standard-version": "^9.5.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -33,6 +33,10 @@ export type CartItem = {
 
 export type Order = {
   id: UUID;
+  customer_name: string;
+  affiliated_player: string;
+  affiliated_group: AffiliatedGroup;
+  phone: string;
   email: string;
   payment_method: "stripe";
   status: "pending" | "paid" | "fulfilled" | "cancelled";
@@ -40,5 +44,16 @@ export type Order = {
   stripe_session_id?: string | null;
   paid_at?: string | null;
 };
+
+export type AffiliatedGroup =
+  | "Tykes - Kindegarden"
+  | "Small Ball Girls (Gr 1-2)"
+  | "Small Ball Boys (Gr 1-2)"
+  | "Jr Mini Girls (Gr 3-4)"
+  | "Jr Mini Boys (Gr 3-4)"
+  | "Mini Girls House (Gr 5-6)"
+  | "Mini Boys House (Gr 5-6)"
+  | "Mini Girls Rep (Gr 5-6)"
+  | "Mini Boys Rep (Gr 5-6)";
 
 

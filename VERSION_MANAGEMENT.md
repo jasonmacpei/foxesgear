@@ -1,18 +1,19 @@
-# Basketball Practice Planner
+# FoxesGear Version Management
 
-## Introduction
+## Overview
 
-Basketball Practice Planner is a tool to help coaches design and manage basketball practice sessions efficiently.
+This document describes how FoxesGear manages versions, generates a changelog, creates Git tags, and pushes releases to GitHub.
 
-## Features
+We use conventional commits and the "standard-version" workflow to:
+- Update `package.json` version
+- Generate or update `CHANGELOG.md`
+- Create a version commit and Git tag
+- Push the commit and tag to GitHub
 
-- Create and save practice plans
-- Share practice plans with team members
-- Track player progress over time
+## Prerequisites
 
-## Installation
-
-Run the following command to install the dependencies:
+- Git is configured locally with access to the GitHub repository (`origin` remote set)
+- Dependencies installed:
 
 ```bash
 npm install
@@ -20,33 +21,62 @@ npm install
 
 ## Development
 
-To start the development server, run:
+Start the dev server:
 
 ```bash
 npm run dev
 ```
 
-## Releases & Deploys
+## Release Workflow
 
-Version management is handled via scripts that update the version, commit changes, and trigger deployments. See [VERSION_MANAGEMENT.md](project_docs/deployment/VERSION_MANAGEMENT.md) for details.
+The repo provides release scripts powered by `standard-version`.
 
-### Quick Usage Example
-
-To bump a version and trigger a Vercel deployment:
+### First Release (initializes the changelog and tags)
 
 ```bash
-# For a minor release (new features, backwards compatible)
-npm run version:minor
-
-# For a patch release (bug fixes only)
-npm run version:patch
-
-# For a major release (breaking changes)
-npm run version:major
+npm run release:first
 ```
 
-This will:
-- Update package.json, version.ts, and version display component
-- Commit changes and create a Git tag
-- Push branch and tag atomically to avoid duplicate Vercel builds
-- Trigger a new Vercel deployment with the updated version visible in the UI
+### Subsequent Releases
+
+Choose the appropriate semantic bump:
+
+```bash
+# Bug fixes only
+npm run release:patch
+
+# Backwards‑compatible features
+npm run release:minor
+
+# Breaking changes
+npm run release:major
+```
+
+Each command will:
+- Update the version in `package.json`
+- Generate/update `CHANGELOG.md`
+- Create a version commit and Git tag
+- Push the branch and tags to GitHub
+
+If your CI/CD (e.g., Vercel) is connected to GitHub, pushing the tag/commit will trigger a new deployment.
+
+## Conventional Commits
+
+For best results, use Conventional Commits in your PRs and merges. Example prefixes:
+- `fix:` bug fixes
+- `feat:` new, backwards‑compatible features
+- `perf:` performance improvements
+- `refactor:` refactoring without behavior change
+- `docs:` documentation updates
+- `chore:` tooling and maintenance
+
+Include `BREAKING CHANGE:` in the body when introducing breaking changes. `standard-version` will use these messages to categorize the changelog.
+
+## Changelog Location
+
+- Generated at `CHANGELOG.md` in the repo root.
+
+## Troubleshooting
+
+- Ensure `origin` is set and you have permission to push.
+- If you started without prior tags, run `npm run release:first` once to initialize the changelog and tag history.
