@@ -28,7 +28,7 @@ export async function POST(
       .eq("stripe_session_id", orderId)
       .maybeSingle();
     order = fallback.data as typeof order;
-    error = fallback.error ?? undefined;
+    error = fallback.error ?? null;
   }
 
   if (error || !order) {
