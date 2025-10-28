@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.13](https://github.com/jasonmacpei/foxesgear/compare/v0.0.12...v0.0.13) (2025-10-28)
+
+
+### Bug Fixes
+
+* **shop:** force dynamic rendering for shop and product detail to avoid stale cache showing inactive products ([e3c1037](https://github.com/jasonmacpei/foxesgear/commit/e3c10372276508907318cf80439f325e87e30964))
+
 ### [0.0.12](https://github.com/jasonmacpei/foxesgear/compare/v0.0.11...v0.0.12) (2025-10-28)
 
 
