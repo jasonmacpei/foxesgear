@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.4](https://github.com/jasonmacpei/foxesgear/compare/v0.1.3...v0.1.4) (2025-10-28)
+
+
+### Bug Fixes
+
+* **admin:** refactor effect to pass non-null selectedOrder to async function ([5ed92fa](https://github.com/jasonmacpei/foxesgear/commit/5ed92fa7493189dc456d1a4b75d8b5e3fd371dc3))
+
 ### [0.1.3](https://github.com/jasonmacpei/foxesgear/compare/v0.1.2...v0.1.3) (2025-10-28)
 
 
