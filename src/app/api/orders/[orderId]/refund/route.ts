@@ -6,9 +6,9 @@ export const runtime = "nodejs";
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { orderId: string } }
+  context: { params: Promise<{ orderId: string }> }
 ) {
-  const orderId = params.orderId;
+  const { orderId } = await context.params;
   if (!orderId) {
     return NextResponse.json({ error: "missing_order_id" }, { status: 400 });
   }
