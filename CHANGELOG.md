@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.12](https://github.com/jasonmacpei/foxesgear/compare/v0.0.11...v0.0.12) (2025-10-28)
+
+
+### Bug Fixes
+
+* **reports:** exclude refunded and non-paid orders from printer and sales summaries (inner join orders + status filter) ([61c3e7a](https://github.com/jasonmacpei/foxesgear/commit/61c3e7ad12f737292bd0730e139aebaaa0282487))
+
 ### [0.0.11](https://github.com/jasonmacpei/foxesgear/compare/v0.0.10...v0.0.11) (2025-10-28)
 
 
