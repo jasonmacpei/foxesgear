@@ -14,10 +14,12 @@ export async function POST(
   }
 
   // Fetch order with Stripe charge or session to derive payment intent
+  // Try matching by order UUID or by stripe_session_id (just in case the client passed a session id)
   let { data: order, error } = await supabaseAdmin
     .from("orders")
     .select("id, status, amount_total_cents, stripe_charge_id, stripe_session_id, is_test")
-    .eq("id", orderId)
+    .or(`id.eq.${orderId},stripe_session_id.eq.${orderId}`)
+    .limit(1)
     .maybeSingle();
 
   // Fallback: in case a Checkout Session ID was passed by mistake
