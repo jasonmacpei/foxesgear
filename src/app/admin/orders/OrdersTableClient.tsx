@@ -12,6 +12,9 @@ type Order = {
   paid_at?: string | null;
   created_at: string;
   is_test?: boolean;
+  customer_name?: string;
+  affiliated_player?: string;
+  affiliated_group?: string;
 };
 
 export default function OrdersTableClient({ orders }: { orders: Order[] }) {
@@ -45,6 +48,29 @@ export default function OrdersTableClient({ orders }: { orders: Order[] }) {
       cancelled = true;
     };
   }, [selectedOrder]);
+
+  // Ensure player/group are present even if not in initial rows (e.g., stale deploy)
+  useEffect(() => {
+    if (!selectedOrder) return;
+    let cancelled = false;
+    async function loadMeta() {
+      const needsMeta = !selectedOrder.affiliated_player || !selectedOrder.affiliated_group || !selectedOrder.customer_name;
+      if (!needsMeta) return;
+      const { data } = await supabase
+        .from("orders")
+        .select("customer_name, affiliated_player, affiliated_group")
+        .eq("id", selectedOrder.id)
+        .single();
+      if (cancelled) return;
+      if (data) {
+        setSelectedOrder((prev) => (prev && prev.id === selectedOrder.id ? { ...prev, ...data } : prev));
+      }
+    }
+    loadMeta();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedOrder?.id]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border">
@@ -129,7 +155,15 @@ export default function OrdersTableClient({ orders }: { orders: Order[] }) {
                 Close
               </button>
             </div>
-            <div className="mb-3 text-sm text-muted-foreground">{selectedOrder.email}</div>
+            <div className="mb-3 text-sm text-muted-foreground">
+              <div>{selectedOrder.email}</div>
+              <div className="mt-1 text-foreground">
+                <span className="font-medium">Player:</span> {selectedOrder.affiliated_player}
+              </div>
+              <div className="text-foreground">
+                <span className="font-medium">Group:</span> {selectedOrder.affiliated_group}
+              </div>
+            </div>
             <table className="w-full text-sm">
               <thead className="bg-muted/60 text-muted-foreground">
                 <tr>

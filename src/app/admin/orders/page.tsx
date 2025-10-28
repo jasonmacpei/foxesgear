@@ -9,7 +9,7 @@ type EnvFilter = "all" | "prod" | "test";
 export default async function AdminOrdersPage() {
   const { data: rawOrders } = await supabaseAdmin
     .from("orders")
-    .select("id, email, payment_method, status, amount_total_cents, paid_at, created_at, is_test, stripe_session_id")
+    .select("id, email, payment_method, status, amount_total_cents, paid_at, created_at, is_test, stripe_session_id, customer_name, affiliated_player, affiliated_group")
     .order("created_at", { ascending: false });
 
   const orders = rawOrders ?? [];
