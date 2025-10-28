@@ -21,7 +21,8 @@ function toCsv(rows: any[]): string {
 export async function GET(req: NextRequest) {
   const { data, error } = await supabaseAdmin
     .from("order_items")
-    .select("product_name, size_value, color_value, quantity")
+    .select("product_name, size_value, color_value, quantity, orders!inner(status)")
+    .eq("orders.status", "paid")
     .order("product_name")
     .order("size_value")
     .order("color_value");

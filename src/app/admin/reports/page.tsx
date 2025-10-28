@@ -8,7 +8,8 @@ function fmt(n: number) {
 export default async function AdminReportsPage() {
   const { data: printerRaw } = await supabaseAdmin
     .from("order_items")
-    .select("product_name, size_value, color_value, quantity")
+    .select("product_name, size_value, color_value, quantity, orders!inner(status)")
+    .eq("orders.status", "paid")
     .order("product_name")
     .order("size_value")
     .order("color_value");
@@ -25,7 +26,8 @@ export default async function AdminReportsPage() {
 
   const { data: salesRaw } = await supabaseAdmin
     .from("order_items")
-    .select("product_name, line_total_cents, quantity")
+    .select("product_name, line_total_cents, quantity, orders!inner(status)")
+    .eq("orders.status", "paid")
     .order("product_name");
   const totals = new Map<string, { revenue_cents: number; qty: number }>();
   for (const r of salesRaw ?? []) {

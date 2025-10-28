@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   // Aggregate sales from our DB (paid orders only)
   const { data: items, error } = await supabaseAdmin
     .from("order_items")
-    .select("product_name, line_total_cents, quantity")
+    .select("product_name, line_total_cents, quantity, orders!inner(status)")
+    .eq("orders.status", "paid")
     .order("product_name");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
