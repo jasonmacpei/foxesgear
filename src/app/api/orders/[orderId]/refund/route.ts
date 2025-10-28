@@ -17,7 +17,7 @@ export async function POST(
   // Try matching by order UUID or by stripe_session_id (just in case the client passed a session id)
   let { data: order, error } = await supabaseAdmin
     .from("orders")
-    .select("id, status, amount_total_cents, stripe_charge_id, stripe_session_id, is_test")
+    .select("*")
     .or(`id.eq.${orderId},stripe_session_id.eq.${orderId}`)
     .limit(1)
     .maybeSingle();
@@ -26,7 +26,7 @@ export async function POST(
   if ((!order || error) && !order && orderId) {
     const fallback = await supabaseAdmin
       .from("orders")
-      .select("id, status, amount_total_cents, stripe_charge_id, stripe_session_id, is_test")
+      .select("*")
       .eq("stripe_session_id", orderId)
       .maybeSingle();
     order = fallback.data as typeof order;
@@ -46,7 +46,7 @@ export async function POST(
 
   try {
     // Prefer refunding by charge if available; otherwise by payment_intent from session
-    let chargeId: string | null = order.stripe_charge_id ?? null;
+    let chargeId: string | null = (order as any).stripe_charge_id ?? null;
 
     if (!chargeId && order.stripe_session_id) {
       // Retrieve session to get payment_intent -> charge
