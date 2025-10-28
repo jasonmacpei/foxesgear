@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.8](https://github.com/jasonmacpei/foxesgear/compare/v0.0.7...v0.0.8) (2025-10-28)
+
+
+### Bug Fixes
+
+* **api:** align refund route context type with Next.js build expectations ([6fa30ca](https://github.com/jasonmacpei/foxesgear/commit/6fa30cab8324c2f153613783a74f3165a4129a6e))
+* **api:** refund route types — ensure PostgrestError is null not undefined ([01beec3](https://github.com/jasonmacpei/foxesgear/commit/01beec32cf903443083e28c9b2db5cb38a27fdce))
+
 ### [0.0.7](https://github.com/jasonmacpei/foxesgear/compare/v0.0.6...v0.0.7) (2025-10-28)
 
 
