@@ -45,19 +45,43 @@ export async function POST(
   }
 
   try {
-    // Prefer refunding by charge if available; otherwise by payment_intent from session
+    // Prefer refunding by charge if available; otherwise derive from payment_intent via session
     let chargeId: string | null = (order as any).stripe_charge_id ?? null;
 
     if (!chargeId && order.stripe_session_id) {
-      // Retrieve session to get payment_intent -> charge
-      const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id, { expand: ["payment_intent.charges"] });
-      const pi = session.payment_intent as any;
-      const charges = pi?.charges?.data ?? [];
-      chargeId = charges[0]?.id ?? null;
+      // Retrieve Checkout Session, then fetch Payment Intent and get its latest charge id
+      const session = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+      const paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : (session.payment_intent as any)?.id ?? null;
+
+      if (paymentIntentId) {
+        try {
+          const pi = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["latest_charge"] });
+          const latestCharge = (pi as any).latest_charge;
+          if (typeof latestCharge === "string") {
+            chargeId = latestCharge;
+          } else if (latestCharge && typeof latestCharge === "object") {
+            chargeId = (latestCharge as any).id ?? null;
+          }
+
+          // Fallback: list charges for the payment intent
+          if (!chargeId) {
+            const cl = await stripe.charges.list({ payment_intent: paymentIntentId, limit: 1 });
+            chargeId = cl.data[0]?.id ?? null;
+          }
+        } catch (_e) {
+          // Swallow and fall through to missing_charge_id handling below
+        }
+      }
     }
 
     if (!chargeId) {
-      return NextResponse.json({ error: "missing_charge_id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "missing_charge_id", detail: `No charge could be derived for order ${order.id}` },
+        { status: 400 },
+      );
     }
 
     // Issue full refund
