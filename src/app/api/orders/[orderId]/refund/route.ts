@@ -33,8 +33,11 @@ export async function POST(
     error = fallback.error ?? null;
   }
 
-  if (error || !order) {
-    return NextResponse.json({ error: "order_not_found" }, { status: 404 });
+  if (error) {
+    return NextResponse.json({ error: "order_lookup_failed", detail: error.message }, { status: 500 });
+  }
+  if (!order) {
+    return NextResponse.json({ error: "order_not_found", detail: `No order for id or session: ${orderId}` }, { status: 404 });
   }
 
   if (order.status !== "paid") {
