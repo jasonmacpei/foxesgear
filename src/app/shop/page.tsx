@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+ 
 import { supabase } from "@/lib/supabaseClient";
 import { ProductCard } from "@/components/ProductCard";
 
