@@ -66,7 +66,8 @@ export default function CheckoutPage() {
       try {
         data = text ? (JSON.parse(text) as typeof data) : {};
       } catch {
-        data = { error: res.ok ? undefined : `Request failed (${res.status})` };
+        // With exactOptionalPropertyTypes, omit optional keys rather than setting undefined
+        data = res.ok ? {} : { error: `Request failed (${res.status})` };
       }
       if (data.url) {
         window.location.href = data.url;
