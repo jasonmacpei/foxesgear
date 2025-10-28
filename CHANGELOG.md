@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.11](https://github.com/jasonmacpei/foxesgear/compare/v0.0.10...v0.0.11) (2025-10-28)
+
+
+### Bug Fixes
+
+* **api:** robustly derive Stripe charge id for refunds via payment_intent latest_charge and fallback list ([0691085](https://github.com/jasonmacpei/foxesgear/commit/069108539e22135dc24c3fee9f9478b46af16354))
+* **api:** select all columns in refund route to avoid missing stripe_charge_id column in typed selection ([7b6f039](https://github.com/jasonmacpei/foxesgear/commit/7b6f03991ad063c18ade1d0d71ef1f4ddd092329))
+
 ### [0.0.10](https://github.com/jasonmacpei/foxesgear/compare/v0.0.9...v0.0.10) (2025-10-28)
 
 ### [0.0.9](https://github.com/jasonmacpei/foxesgear/compare/v0.0.8...v0.0.9) (2025-10-28)
