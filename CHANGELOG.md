@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.2](https://github.com/jasonmacpei/foxesgear/compare/v0.1.1...v0.1.2) (2025-10-28)
+
+
+### Bug Fixes
+
+* **admin:** ensure order detail loads player/group via client fetch if missing ([200b085](https://github.com/jasonmacpei/foxesgear/commit/200b0853c25fabaa350ddc797e3e3098a4e9151f))
+
 ### [0.1.1](https://github.com/jasonmacpei/foxesgear/compare/v0.1.0...v0.1.1) (2025-10-28)
 
 ## [0.1.0](https://github.com/jasonmacpei/foxesgear/compare/v0.0.13...v0.1.0) (2025-10-28)
