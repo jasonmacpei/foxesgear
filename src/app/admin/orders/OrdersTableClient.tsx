@@ -54,16 +54,17 @@ export default function OrdersTableClient({ orders }: { orders: Order[] }) {
     if (!selectedOrder) return;
     let cancelled = false;
     async function loadMeta() {
-      const needsMeta = !selectedOrder.affiliated_player || !selectedOrder.affiliated_group || !selectedOrder.customer_name;
+      const current = selectedOrder; // narrow to non-null for this closure
+      const needsMeta = !current.affiliated_player || !current.affiliated_group || !current.customer_name;
       if (!needsMeta) return;
       const { data } = await supabase
         .from("orders")
         .select("customer_name, affiliated_player, affiliated_group")
-        .eq("id", selectedOrder.id)
+        .eq("id", current.id)
         .single();
       if (cancelled) return;
       if (data) {
-        setSelectedOrder((prev) => (prev && prev.id === selectedOrder.id ? { ...prev, ...data } : prev));
+        setSelectedOrder((prev) => (prev && prev.id === current.id ? { ...prev, ...data } : prev));
       }
     }
     loadMeta();
