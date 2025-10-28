@@ -15,9 +15,15 @@ type Order = {
 };
 
 export default function OrdersTableClient({ orders }: { orders: Order[] }) {
+  const [rows, setRows] = useState<Order[]>(orders);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refunding, setRefunding] = useState(false);
+
+  useEffect(() => {
+    setRows(orders);
+  }, [orders]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -55,7 +61,7 @@ export default function OrdersTableClient({ orders }: { orders: Order[] }) {
           </tr>
         </thead>
         <tbody>
-          {orders.map((o) => (
+          {rows.map((o) => (
             <tr
               key={o.id}
               className="cursor-pointer border-t border-border hover:bg-muted/50"
@@ -159,6 +165,41 @@ export default function OrdersTableClient({ orders }: { orders: Order[] }) {
                 )}
               </tbody>
             </table>
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                className={`rounded-md px-3 py-2 text-sm font-medium text-white ${
+                  selectedOrder.status === "paid" ? "bg-red-600 hover:bg-red-700" : "bg-gray-400 cursor-not-allowed"
+                }`}
+                disabled={selectedOrder.status !== "paid" || refunding}
+                onClick={async () => {
+                  if (selectedOrder.status !== "paid") return;
+                  const confirmRefund = window.confirm(
+                    "Issue a full refund for this order? This cannot be undone."
+                  );
+                  if (!confirmRefund) return;
+                  try {
+                    setRefunding(true);
+                    const res = await fetch(`/api/orders/${selectedOrder.id}/refund`, { method: "POST" });
+                    if (!res.ok) {
+                      const j = await res.json().catch(() => ({}));
+                      throw new Error(j?.detail || j?.error || `HTTP ${res.status}`);
+                    }
+                    // Update UI state
+                    const nextSelected = { ...selectedOrder, status: "refunded" } as Order;
+                    setSelectedOrder(nextSelected);
+                    setRows((r) => r.map((x) => (x.id === nextSelected.id ? nextSelected : x)));
+                    alert("Refund issued successfully.");
+                  } catch (e: any) {
+                    alert(`Refund failed: ${e?.message ?? String(e)}`);
+                  } finally {
+                    setRefunding(false);
+                  }
+                }}
+              >
+                {refunding ? "Refunding…" : "Refund"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
