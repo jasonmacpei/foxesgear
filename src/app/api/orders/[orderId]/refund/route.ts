@@ -6,19 +6,30 @@ export const runtime = "nodejs";
 
 export async function POST(
   _req: NextRequest,
-  context: { params: Promise<{ orderId: string }> }
+  context: { params: { orderId: string } }
 ) {
-  const { orderId } = await context.params;
+  const { orderId } = context.params;
   if (!orderId) {
     return NextResponse.json({ error: "missing_order_id" }, { status: 400 });
   }
 
   // Fetch order with Stripe charge or session to derive payment intent
-  const { data: order, error } = await supabaseAdmin
+  let { data: order, error } = await supabaseAdmin
     .from("orders")
     .select("id, status, amount_total_cents, stripe_charge_id, stripe_session_id, is_test")
     .eq("id", orderId)
-    .single();
+    .maybeSingle();
+
+  // Fallback: in case a Checkout Session ID was passed by mistake
+  if ((!order || error) && !order && orderId) {
+    const fallback = await supabaseAdmin
+      .from("orders")
+      .select("id, status, amount_total_cents, stripe_charge_id, stripe_session_id, is_test")
+      .eq("stripe_session_id", orderId)
+      .maybeSingle();
+    order = fallback.data as typeof order;
+    error = fallback.error ?? undefined;
+  }
 
   if (error || !order) {
     return NextResponse.json({ error: "order_not_found" }, { status: 404 });

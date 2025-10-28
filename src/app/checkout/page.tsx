@@ -40,6 +40,12 @@ export default function CheckoutPage() {
     try {
       setLoading(true);
       setError(null);
+      // Prevent calling API when subtotal is zero (or less than $0.50)
+      const subtotal = subtotalCents();
+      if (!Number.isFinite(subtotal) || subtotal < 50) {
+        setError("Cart total must be at least $0.50");
+        return;
+      }
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -54,11 +60,20 @@ export default function CheckoutPage() {
           },
         }),
       });
-      const data = (await res.json()) as { url?: string; error?: string };
+      // Try to parse JSON if possible; if not, synthesize an error
+      let data: { url?: string; error?: string } = {};
+      const text = await res.text();
+      try {
+        data = text ? (JSON.parse(text) as typeof data) : {};
+      } catch {
+        data = { error: res.ok ? undefined : `Request failed (${res.status})` };
+      }
       if (data.url) {
         window.location.href = data.url;
       } else if (data.error) {
         setError(data.error);
+      } else if (!res.ok) {
+        setError(`Request failed (${res.status})`);
       }
     } finally {
       setLoading(false);

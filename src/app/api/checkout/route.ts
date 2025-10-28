@@ -77,6 +77,9 @@ export async function POST(req: NextRequest) {
     if (!v || !v.active) {
       return NextResponse.json({ error: "invalid_variant" }, { status: 400 });
     }
+    if (!v.price_cents || v.price_cents <= 0) {
+      return NextResponse.json({ error: "invalid_price" }, { status: 400 });
+    }
     if (item.size && v.size_value && item.size !== v.size_value) {
       return NextResponse.json({ error: "size_mismatch" }, { status: 400 });
     }
@@ -103,22 +106,37 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    payment_method_types: ["card"],
-    line_items: lineItems,
-    customer_email: customer.email,
-    metadata: {
-      customer_name: customer.name,
-      affiliated_player: customer.affiliatedPlayer,
-      affiliated_group: customer.affiliatedGroup,
-      phone: customer.phone,
-    },
-    success_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/success`,
-    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/checkout`,
-  });
+  // Enforce a minimum total (Stripe requires a positive amount; generally >= 50¢ CAD)
+  const totalCents = lineItems.reduce(
+    (sum, li) => sum + Number(li.price_data?.unit_amount ?? 0) * Number(li.quantity ?? 0),
+    0,
+  );
+  if (!Number.isFinite(totalCents) || totalCents < 50) {
+    return NextResponse.json({ error: "minimum_total_not_met" }, { status: 400 });
+  }
 
-  return NextResponse.json({ url: session.url });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: lineItems,
+      customer_email: customer.email,
+      metadata: {
+        customer_name: customer.name,
+        affiliated_player: customer.affiliatedPlayer,
+        affiliated_group: customer.affiliatedGroup,
+        phone: customer.phone,
+      },
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/checkout`,
+    });
+
+    return NextResponse.json({ url: session.url });
+  } catch (err: any) {
+    // Return a JSON error so the client can render a friendly message
+    const message = err?.message ?? "stripe_session_failed";
+    return NextResponse.json({ error: "stripe_session_failed", detail: message }, { status: 500 });
+  }
 }
 
 
