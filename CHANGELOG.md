@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.9](https://github.com/jasonmacpei/foxesgear/compare/v0.0.8...v0.0.9) (2025-10-28)
+
+
+### Bug Fixes
+
+* **api:** refund lookup tolerates stripe_session_id passed as param (OR filter) ([2e3f99a](https://github.com/jasonmacpei/foxesgear/commit/2e3f99a08244bf30299fb583cdc3402761381379))
+* **checkout:** avoid setting undefined on optional error field for exactOptionalPropertyTypes ([47cf0fb](https://github.com/jasonmacpei/foxesgear/commit/47cf0fba007941b45eb3bfb89fcc4033d55f5c52))
+
 ### [0.0.8](https://github.com/jasonmacpei/foxesgear/compare/v0.0.7...v0.0.8) (2025-10-28)
 
 
