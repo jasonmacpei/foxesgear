@@ -36,36 +36,43 @@ export async function POST(req: NextRequest) {
       .eq("stripe_session_id", session.id)
       .limit(1)
       .maybeSingle();
-    if (existing) {
-      return NextResponse.json({ ok: true, note: "already_present", orderId: existing.id });
-    }
+    let orderId: string | null = existing?.id ?? null;
 
     const amountTotal = session.amount_total ?? 0;
-    const { data: order, error: orderErr } = await supabaseAdmin
-      .from("orders")
-      .insert({
-        email,
-        customer_name: meta.customer_name ?? "",
-        affiliated_player: meta.affiliated_player ?? "",
-        affiliated_group: meta.affiliated_group ?? "",
-        phone: meta.phone ?? "",
-        payment_method: "stripe",
-        status: "paid",
-        amount_total_cents: amountTotal,
-        stripe_session_id: session.id,
-        is_test: !(session.livemode ?? false),
-        paid_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (orderErr || !order) {
-      return NextResponse.json({ error: "order_insert_failed", detail: orderErr?.message }, { status: 500 });
+    if (!orderId) {
+      const { data: order, error: orderErr } = await supabaseAdmin
+        .from("orders")
+        .insert({
+          email,
+          customer_name: meta.customer_name ?? "",
+          affiliated_player: meta.affiliated_player ?? "",
+          affiliated_group: meta.affiliated_group ?? "",
+          phone: meta.phone ?? "",
+          payment_method: "stripe",
+          status: "paid",
+          amount_total_cents: amountTotal,
+          stripe_session_id: session.id,
+          is_test: !(session.livemode ?? false),
+          paid_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      if (orderErr || !order) {
+        return NextResponse.json({ error: "order_insert_failed", detail: orderErr?.message }, { status: 500 });
+      }
+      orderId = order.id as string;
     }
 
     // Insert items
-    const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { expand: ["data.price.product"] });
-    for (const li of lineItems.data) {
+    // Insert line items only if missing
+    const { data: existingItems } = await supabaseAdmin
+      .from("order_items")
+      .select("id")
+      .eq("order_id", orderId);
+    let insertedItems = 0;
+    if (!existingItems || existingItems.length === 0) {
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { expand: ["data.price.product"] });
+      for (const li of lineItems.data) {
       const productName = li.description ?? "Item";
       const unitPrice = li.price?.unit_amount ?? 0;
       const qty = li.quantity ?? 1;
@@ -75,16 +82,17 @@ export async function POST(req: NextRequest) {
       const mergedMeta = { ...metaFromProduct, ...metaFromLine } as Record<string, string>;
       const size = mergedMeta.size ?? null;
       const color = mergedMeta.color ?? null;
-
-      await supabaseAdmin.from("order_items").insert({
-        order_id: order.id,
-        product_name: productName,
-        size_value: size,
-        color_value: color,
-        quantity: qty,
-        unit_price_cents: unitPrice,
-        line_total_cents: unitPrice * qty,
-      });
+        const { error: itemErr } = await supabaseAdmin.from("order_items").insert({
+          order_id: orderId,
+          product_name: productName,
+          size_value: size,
+          color_value: color,
+          quantity: qty,
+          unit_price_cents: unitPrice,
+          line_total_cents: unitPrice * qty,
+        });
+        if (!itemErr) insertedItems += 1;
+      }
     }
 
     // Send email (best effort)
@@ -99,7 +107,7 @@ export async function POST(req: NextRequest) {
       } catch (_) {}
     }
 
-    return NextResponse.json({ ok: true, orderId: order.id });
+    return NextResponse.json({ ok: true, orderId, itemsInserted: insertedItems });
   } catch (e: any) {
     return NextResponse.json({ error: "backfill_failed", detail: e?.message ?? String(e) }, { status: 500 });
   }
