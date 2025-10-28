@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/jasonmacpei/foxesgear/compare/v0.1.2...v0.1.3) (2025-10-28)
+
+
+### Bug Fixes
+
+* **admin:** narrow selectedOrder in effect to satisfy TS nullability ([f757601](https://github.com/jasonmacpei/foxesgear/commit/f757601561feda0a663db75394edd5ac2b19153a))
+
 ### [0.1.2](https://github.com/jasonmacpei/foxesgear/compare/v0.1.1...v0.1.2) (2025-10-28)
 
 
