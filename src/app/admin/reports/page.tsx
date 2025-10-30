@@ -5,6 +5,8 @@ function fmt(n: number) {
   return `$${(n / 100).toFixed(2)}`;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminReportsPage() {
   const { data: printerRaw } = await supabaseAdmin
     .from("order_items")
