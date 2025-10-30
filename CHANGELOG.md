@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.5](https://github.com/jasonmacpei/foxesgear/compare/v0.1.4...v0.1.5) (2025-10-30)
+
+
+### Bug Fixes
+
+* **reports:** force dynamic rendering so Reports reflect latest paid orders ([a04ae4c](https://github.com/jasonmacpei/foxesgear/commit/a04ae4c5d99a8877b8786654a2ad7fd4528cadb9))
+
 ### [0.1.4](https://github.com/jasonmacpei/foxesgear/compare/v0.1.3...v0.1.4) (2025-10-28)
 
 
