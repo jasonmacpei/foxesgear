@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getSiteSettings } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { revalidatePath } from "next/cache";
@@ -9,13 +10,15 @@ export default async function AdminDashboardPage() {
     "use server";
     const storeClosed = formData.get("store_closed") === "on";
     const message = String(formData.get("store_closed_message") ?? "").trim();
-    await supabaseAdmin
-      .from("settings")
-      .update({
+    // Ensure the settings row exists; create or update atomically
+    await supabaseAdmin.from("settings").upsert(
+      {
+        id: 1,
         store_closed: storeClosed,
         store_closed_message: message || null,
-      })
-      .eq("id", 1);
+      },
+      { onConflict: "id" },
+    );
     revalidatePath("/"); // update homepage
     revalidatePath("/shop");
     revalidatePath("/product"); // product pages are dynamic; best-effort
