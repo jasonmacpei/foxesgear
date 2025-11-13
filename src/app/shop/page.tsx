@@ -2,8 +2,21 @@ export const dynamic = "force-dynamic";
  
 import { supabase } from "@/lib/supabaseClient";
 import { ProductCard } from "@/components/ProductCard";
+import { getSiteSettings } from "@/lib/settings";
 
 export default async function ShopPage() {
+  const settings = await getSiteSettings();
+  if (settings.store_closed) {
+    return (
+      <div className="container py-10">
+        <h2 className="mb-4 text-2xl font-semibold">Store Closed</h2>
+        <p className="max-w-2xl text-muted-foreground">
+          {settings.store_closed_message ??
+            "We’re currently closed and will reopen once we restock in the new year."}
+        </p>
+      </div>
+    );
+  }
   const { data: products } = await supabase
     .from("products")
     .select("id, name, slug, description, image_url")

@@ -76,7 +76,10 @@ create table if not exists settings (
   preorder_start timestamptz,
   preorder_end timestamptz,
   etransfer_email text,
-  pickup_info text
+  pickup_info text,
+  -- Store availability controls
+  store_closed boolean not null default false,
+  store_closed_message text
 );
 
 -- RLS placeholders (enable and add policies in Supabase SQL editor)

@@ -6,6 +6,11 @@ values
   ('Foxes Cap', 'foxes-cap', 'Adjustable cap with embroidered logo.', true, 3)
 on conflict (slug) do nothing;
 
+-- Ensure a settings row exists with default values
+insert into settings (id, store_closed, store_closed_message)
+values (1, false, 'We''re currently closed for restocking and will reopen in the new year!')
+on conflict (id) do nothing;
+
 -- Variants (sizes/colors/prices in cents)
 insert into product_variants (product_id, size_value, color_value, price_cents, sku, active)
 select p.id, v.size, v.color, v.price, v.sku, true

@@ -1,3 +1,4 @@
+import { getSiteSettings } from "@/lib/settings";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { stripe } from "@/lib/stripeClient";
@@ -31,6 +32,15 @@ const CustomerSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Block checkout entirely if store is closed
+  const settings = await getSiteSettings();
+  if (settings.store_closed) {
+    const message =
+      settings.store_closed_message ??
+      "The store is currently closed. Please check back when we reopen.";
+    return NextResponse.json({ error: "store_closed", detail: message }, { status: 403 });
+  }
+
   const body = await req.json();
   const parse = z
     .object({ items: z.array(ItemSchema).min(1), customer: CustomerSchema })

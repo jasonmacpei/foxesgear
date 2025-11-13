@@ -1,12 +1,25 @@
 export const dynamic = "force-dynamic";
  
 import { supabase } from "@/lib/supabaseClient";
+import { getSiteSettings } from "@/lib/settings";
 import { AddToCart } from "./ui";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
+  const settings = await getSiteSettings();
+  if (settings.store_closed) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <h2 className="mb-4 text-2xl font-semibold">Store Closed</h2>
+        <p className="max-w-2xl text-muted-foreground">
+          {settings.store_closed_message ??
+            "We’re currently closed and will reopen once we restock in the new year."}
+        </p>
+      </div>
+    );
+  }
   const { data: product } = await supabase
     .from("products")
     .select("id, name, description, image_url")
