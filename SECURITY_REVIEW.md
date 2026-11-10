@@ -18,7 +18,7 @@ Framework guidance: [Next.js security advisories](https://github.com/vercel/next
 
 ## Users
 
-`/admin/users` supports creating an account and a private, expiring password-setup link, generating a replacement setup link, granting/revoking admin access, and disabling/re-enabling an account. Links are returned only to the owner and are not emailed automatically. New users choose their own password, with a 12-character minimum in the setup form. Existing users will need to sign in again to establish the server-readable cookie session.
+`/admin/users` supports adding accounts with an automatically emailed setup invitation, sending or resending invitations, granting/revoking admin access, and disabling/re-enabling accounts. Only the owner can perform these actions. New users choose their own password, with a 12-character minimum. The owner receives an email when the first password setup completes; the user list also records setup and invitation-send status. Existing users retain their accounts and permissions.
 
 Role changes use a service-only database function that serializes concurrent changes, verifies the acting owner, and refuses any change to the owner account. Disabled users lose admin and database administration permissions immediately; their sign-in is also banned. The sole protected owner can manage users and every store function. Other admins can manage products, orders, refunds, reports, and seasons; standard accounts have no admin access.
 
@@ -57,3 +57,11 @@ User pages and GET/POST/PATCH account APIs require the owner; ordinary admins ca
 Transaction-rollback tests confirmed owner grant/revoke authority, rejection of staff role changes, protected owner deletion/ban/demotion, immutable ownership, restricted profile visibility, and successful active-product insertion by staff. Browser integration tests cover the same application boundary without modifying any existing products or accounts.
 
 Public Auth self-registration is also blocked at the database boundary in v0.3.1. Every new Auth user must present a matching, unexpired, one-time invitation reserved by the owner API. The insert trigger consumes the reservation and strips its token from user metadata. This works independently of the provider’s public signup flag; provider-management credentials were unavailable, so that flag was not changed. Existing accounts, sign-ins, and password recovery are preserved.
+
+## Automated invitation emails — v0.4.0
+
+Account creation now emails the setup invitation through the existing Resend sender. Only the owner can resend; a database reservation enforces a 60-second cooldown and prevents concurrent sends. Synchronous send failures remain visible in the user list and can be retried with Resend invitation. Provider acceptance is tracked; it is not proof of inbox delivery. Existing pending accounts are not bulk-emailed during deployment.
+
+A private trigger records the first actual Auth password update, stamps the profile, and creates one signup notification per account. The browser requests immediate delivery only for its authenticated user; it cannot claim another user's signup. A private queue, expiring delivery lease, stable provider idempotency key, bounded backoff, and protected Vercel cron retry interruptions without treating later password resets as new signups. Notifications go only to jasonmacpei@hotmail.com and contain no password or setup token. Historical setup timestamps are backfilled only from recorded Auth password-update audits; no retrospective notifications are generated.
+
+The email provider accepted a verification email addressed to its simulated test recipient. Browser integration uses a local Resend-compatible mock so disposable QA account links and signup messages are not sent to real inboxes. The cron secret is stored only in Vercel's production secret configuration.

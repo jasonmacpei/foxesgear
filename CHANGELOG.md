@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.4.0 (2026-11-10)
+
+### Features
+
+* Automatically email a personal setup invitation after the owner adds an account; add Resend invitation with a one-minute cooldown and clear send/failure feedback.
+* Display invitation-email status and first password-setup completion in the user list. Completed accounts receive a password-reset email when requested again.
+* Email jasonmacpei@hotmail.com when a user completes their first password setup, including their name, email, and Atlantic-time completion date.
+* Record signup notifications in a private durable queue, deliver immediately after setup, and retry temporary failures with a protected ten-minute scheduled job and provider idempotency keys.
+
+### Security and validation
+
+* Keep invitations, resends, and role changes owner-only. Confirm signup completion from actual Auth password updates; repeated requests and later password resets do not create duplicate signup events.
+* Preserve existing account setup history where Auth recorded it; do not send retrospective signup notifications.
+* Test provider failure, resend cooldown, automatic email contents, setup completion, duplicate suppression, queue leasing, and retries with a local email test server.
+
 ## 0.3.2 (2026-11-10)
 
 ### User experience

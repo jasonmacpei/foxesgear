@@ -56,6 +56,11 @@ export default function ResetPasswordPage() {
     if (error) setError(error.message);
     else {
       setDone(true);
+      // Completion was recorded by the Auth database trigger, not by this request.
+      // If delivery is interrupted, the server's scheduled retry processes the queue.
+      await fetch("/api/account/setup-completed", { method: "POST", keepalive: true }).catch(
+        () => {},
+      );
       await supabase.auth.signOut();
     }
   }

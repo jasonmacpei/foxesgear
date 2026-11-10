@@ -62,7 +62,7 @@ Apply schema, RLS, then seed initial data via Supabase SQL editor or CLI:
 
 Sign in again after this update so the server can verify your cookie-based session.
 
-- **Owner → Users:** only the protected owner (Jason’s existing account) can create accounts, generate private password-setup links, grant/revoke admin access, and disable/re-enable accounts. Other admins retain product publishing and store management but cannot manage users. Click Share access beside a person to open an invitation labelled with their name and email. Copy invitation includes instructions; Open email draft addresses it to that person, but you still press Send in your email app. No invitation email is sent automatically.
+- **Owner → Users:** only the protected owner can add users and manage access. **Add user and email invitation** sends a personal setup email automatically. Previously added accounts have **Send invitation**, followed by **Resend invitation**; completed accounts have **Send password reset**. A one-minute resend cooldown prevents duplicate clicks. The table records email-send status and when setup completes. Signup completion emails go to `jasonmacpei@hotmail.com`.
 - **Admin → Seasons:** create a basketball season and select the current season for new checkouts. Historical orders remain in their original season.
 - **Dashboard / Orders / Reports:** select 2025–2026 or 2026–2027. CSV exports use the same season as the report. Paid-live reports exclude test and refunded orders.
 
@@ -70,4 +70,12 @@ For a new database, the original schema/RLS SQL above is only the legacy baselin
 
 See [SECURITY_REVIEW.md](SECURITY_REVIEW.md) for findings, verification scope, and remaining follow-ups. `ADMIN_BACKFILL_TOKEN` is retired by the updated backfill endpoint; that endpoint now requires a signed-in admin session and same-origin request.
 
-Authenticated integration QA is opt-in: start a local production build, then run `FOXESGEAR_LIVE_QA=1 npm test -- tests/admin-security.spec.ts --workers=1`. It uses an ephemeral admin session and a disposable Auth account, cleaned up afterward, without sending emails or changing existing orders.
+Authenticated integration QA is opt-in and requires the local email mock:
+
+1. Run `node tests/helpers/email-server.mjs`.
+2. Build, then start locally with `RESEND_BASE_URL=http://127.0.0.1:4010 RESEND_API_KEY=local-test-key CRON_SECRET=local-cron-test npm run start`.
+3. Run `FOXESGEAR_LIVE_QA=1 FOXESGEAR_EMAIL_MOCK_URL=http://127.0.0.1:4010 npm test -- --workers=1`.
+
+QA uses an ephemeral owner session and disposable Auth accounts, cleaned up afterward. Emails remain in the local mock and no existing orders are changed. Never run authenticated email QA against the production website.
+
+Production needs `RESEND_API_KEY`, `RESEND_FROM`, and a server-only `CRON_SECRET`. The scheduled `/api/cron/signup-emails` job retries queued signup notifications every ten minutes; first delivery is attempted as soon as the user saves their password. `RESEND_BASE_URL` is for local tests and must not be set in production.

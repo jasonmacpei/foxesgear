@@ -1,5 +1,5 @@
+import { sendSetupInvitation } from "@/lib/accountEmails";
 import { randomUUID } from "node:crypto";
-import { siteOrigin } from "@/lib/siteOrigin";
 import { NextRequest, NextResponse } from "next/server";
 import { checkOwnerRequest } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -19,18 +19,8 @@ const updateSchema = z.discriminatedUnion("action", [
     isAdmin: z.boolean(),
     disabled: z.boolean(),
   }),
-  z.object({ action: z.literal("setup-link"), userId: z.string().uuid() }),
+  z.object({ action: z.literal("resend-invitation"), userId: z.string().uuid() }),
 ]);
-
-function redirectTo() {
-  return `${siteOrigin()}/reset-password`;
-}
-function setupLink(tokenHash: string, type: "invite" | "recovery") {
-  const url = new URL(redirectTo());
-  url.searchParams.set("token_hash", tokenHash);
-  url.searchParams.set("type", type);
-  return url.toString();
-}
 
 export async function GET(req: NextRequest) {
   const access = await checkOwnerRequest(req);
@@ -42,7 +32,9 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: "Could not load users" }, { status: 500 });
   const { data: profiles, error: profileError } = await supabaseAdmin
     .from("profiles")
-    .select("id, full_name, is_admin, is_disabled")
+    .select(
+      "id, full_name, is_admin, is_disabled, invitation_email_status, invitation_sent_at, setup_complete, setup_completed_at",
+    )
     .in(
       "id",
       data.users.map((u) => u.id),
@@ -63,6 +55,10 @@ export async function GET(req: NextRequest) {
           isOwner: u.id === access.user.id,
           disabled: p?.is_disabled ?? false,
           lastSignIn: u.last_sign_in_at ?? null,
+          invitationEmailStatus: p?.invitation_email_status ?? "not_sent",
+          invitationSentAt: p?.invitation_sent_at ?? null,
+          setupComplete: p?.setup_complete ?? false,
+          setupCompletedAt: p?.setup_completed_at ?? null,
         };
       }),
     },
@@ -88,18 +84,15 @@ export async function POST(req: NextRequest) {
       { error: "Only the owner can authorize a new account" },
       { status: 403 },
     );
-  // Generates an expiring invitation link without sending an email or choosing a password.
+  // Create the account before emailing so its assigned access is already in place.
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({
     type: "invite",
     email: email.toLowerCase(),
-    options: {
-      data: { full_name: fullName, owner_invitation_token: invitationToken },
-      redirectTo: redirectTo(),
-    },
+    options: { data: { full_name: fullName, owner_invitation_token: invitationToken } },
   });
   if (error || !data.user || !data.properties) {
     return NextResponse.json(
-      { error: "Could not create this account. If it already exists, use its setup-link button." },
+      { error: "Could not create this account. If it already exists, use Resend invitation." },
       { status: 400 },
     );
   }
@@ -113,15 +106,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Account created, but access could not be saved. Review this user before sharing a setup link.",
+          "Account created, but access could not be saved. The invitation has not been emailed. Review this user before resending.",
       },
       { status: 500 },
     );
+  const recipient = { id: data.user.id, email: data.user.email ?? email.toLowerCase(), fullName };
+  const delivery = await sendSetupInvitation({
+    actorId: access.user.id,
+    userId: recipient.id,
+    email: recipient.email,
+    fullName,
+    completed: false,
+    initialToken: data.properties.hashed_token,
+  });
   return NextResponse.json(
-    {
-      setupLink: setupLink(data.properties.hashed_token, "invite"),
-      recipient: { id: data.user.id, email: data.user.email ?? email.toLowerCase(), fullName },
-    },
+    { ok: true, recipient, emailStatus: delivery.status },
     { status: 201, headers },
   );
 }
@@ -132,15 +131,15 @@ export async function PATCH(req: NextRequest) {
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid user update" }, { status: 400 });
   const input = parsed.data;
-  if (input.action === "setup-link") {
+  if (input.action === "resend-invitation") {
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("full_name, is_disabled")
+      .select("full_name, is_disabled, setup_complete")
       .eq("id", input.userId)
       .maybeSingle();
     if (!profile || profile.is_disabled)
       return NextResponse.json(
-        { error: "Enable this user before creating a setup link" },
+        { error: "Enable this user before emailing an invitation" },
         { status: 400 },
       );
     const { data: account, error: accountError } = await supabaseAdmin.auth.admin.getUserById(
@@ -148,24 +147,24 @@ export async function PATCH(req: NextRequest) {
     );
     if (accountError || !account.user?.email)
       return NextResponse.json({ error: "User not found" }, { status: 404 });
-    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery",
+    const recipient = {
+      id: account.user.id,
       email: account.user.email,
-      options: { redirectTo: redirectTo() },
+      fullName: profile.full_name ?? "",
+    };
+    const delivery = await sendSetupInvitation({
+      actorId: access.user.id,
+      userId: recipient.id,
+      email: recipient.email,
+      fullName: recipient.fullName,
+      completed: profile.setup_complete,
     });
-    if (error || !data.properties)
-      return NextResponse.json({ error: "Could not create setup link" }, { status: 500 });
-    return NextResponse.json(
-      {
-        setupLink: setupLink(data.properties.hashed_token, "recovery"),
-        recipient: {
-          id: account.user.id,
-          email: account.user.email,
-          fullName: profile.full_name ?? "",
-        },
-      },
-      { headers },
-    );
+    if (delivery.status === "rate_limited")
+      return NextResponse.json(
+        { error: "Please wait one minute before resending this email" },
+        { status: 429, headers },
+      );
+    return NextResponse.json({ ok: true, recipient, emailStatus: delivery.status }, { headers });
   }
   // This database function serializes role changes and rechecks the actor atomically.
   const { error } = await supabaseAdmin.rpc("manage_user_access", {
