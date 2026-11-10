@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { siteOrigin } from "@/lib/siteOrigin";
 import { NextRequest, NextResponse } from "next/server";
 import { checkOwnerRequest } from "@/lib/adminAuth";
@@ -76,11 +77,25 @@ export async function POST(req: NextRequest) {
   if (!parsed.success)
     return NextResponse.json({ error: "Enter a name and valid email address" }, { status: 400 });
   const { email, fullName, isAdmin } = parsed.data;
+  const invitationToken = randomUUID();
+  const { error: invitationError } = await supabaseAdmin.rpc("authorize_user_invitation", {
+    actor_id: access.user.id,
+    invite_email: email.toLowerCase(),
+    invite_token: invitationToken,
+  });
+  if (invitationError)
+    return NextResponse.json(
+      { error: "Only the owner can authorize a new account" },
+      { status: 403 },
+    );
   // Generates an expiring invitation link without sending an email or choosing a password.
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({
     type: "invite",
     email: email.toLowerCase(),
-    options: { data: { full_name: fullName }, redirectTo: redirectTo() },
+    options: {
+      data: { full_name: fullName, owner_invitation_token: invitationToken },
+      redirectTo: redirectTo(),
+    },
   });
   if (error || !data.user || !data.properties) {
     return NextResponse.json(

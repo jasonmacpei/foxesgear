@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.3.1 (2026-11-10)
+
+### Security
+
+* Require a one-time owner-authorized invitation for every new Auth account, blocking direct public signup and automatic account creation outside the owner's user controls.
+* Consume invitation reservations atomically and strip the token from user metadata; existing accounts and normal sign-in/password recovery remain available.
+
 ## 0.3.0 (2026-11-10)
 
 ### Features and security

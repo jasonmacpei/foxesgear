@@ -5,7 +5,17 @@ declare owner_id uuid := public.store_owner_id(); staff_id uuid; target uuid := 
 begin
   select id into staff_id from public.profiles where id <> owner_id and is_admin and not is_disabled limit 1;
   if staff_id is null then raise exception 'Need an existing staff admin for this integration check'; end if;
-  insert into auth.users(id,email,raw_user_meta_data) values(target,'owner-transaction-qa@example.invalid','{}');
+  begin
+    insert into auth.users(id,email,raw_user_meta_data) values(target,'owner-transaction-qa@example.invalid','{}');
+    raise exception 'Uninvited signup permitted';
+  exception when raise_exception then if sqlerrm <> 'Store accounts require an owner invitation' then raise; end if; end;
+  begin
+    perform public.authorize_user_invitation(staff_id,'owner-transaction-qa@example.invalid',target);
+    raise exception 'Staff authorized invitation';
+  exception when raise_exception then if sqlerrm <> 'Owner required' then raise; end if; end;
+  perform public.authorize_user_invitation(owner_id,'owner-transaction-qa@example.invalid',target);
+  insert into auth.users(id,email,raw_user_meta_data) values(target,'owner-transaction-qa@example.invalid',jsonb_build_object('owner_invitation_token',target::text));
+  if exists(select 1 from auth.users where id=target and raw_user_meta_data ? 'owner_invitation_token') then raise exception 'Invitation token leaked into user metadata'; end if;
   begin
     perform public.manage_user_access(staff_id,target,true,false);
     raise exception 'Non-owner changed user access';

@@ -64,6 +64,24 @@ test.describe("authenticated admin and season checks", () => {
     !liveQA,
     "Set FOXESGEAR_LIVE_QA=1 against the local server for disposable live Auth QA",
   );
+  test("public Auth signup cannot create an account", async () => {
+    const email = `blocked-signup-qa-${Date.now()}@example.invalid`;
+    const client = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await client.auth.signUp({
+      email,
+      password: "Disposable-public-signup-QA-2026!",
+    });
+    try {
+      expect(error).not.toBeNull();
+      expect(data.user).toBeNull();
+      const { data: users } = await service.auth.admin.listUsers({ perPage: 1000 });
+      expect(users.users.some((u) => u.email === email)).toBe(false);
+    } finally {
+      if (data.user) await service.auth.admin.deleteUser(data.user.id);
+    }
+  });
   test.beforeAll(async () => {
     const { data: ownerId, error } = await service.rpc("store_owner_id");
     if (error || !ownerId) throw error || new Error("Owner not configured");
