@@ -18,3 +18,7 @@ pnpm-debug.log*
 /.turbo/
 /.cache/
 /dist/
+
+supabase/.temp/
+*.tsbuildinfo
+.env*

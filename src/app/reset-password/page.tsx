@@ -1,76 +1,112 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
 export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<div className="container max-w-md py-12 text-sm text-muted-foreground">Loading…</div>}>
-      <ResetPasswordInner />
-    </Suspense>
-  );
-}
-
-function ResetPasswordInner() {
-  const params = useSearchParams();
+  const initialization = useRef<Promise<void> | null>(null);
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState<"idle" | "ready" | "updating" | "done" | "error">("idle");
-
+  const [confirm, setConfirm] = useState("");
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
   useEffect(() => {
-    // When Supabase sends a recovery link, it arrives with type=recovery
-    const type = params.get("type");
-    // If user lands here without type=recovery, try to set session from URL to enable update
-    if (type !== "recovery") {
-      supabase.auth.onAuthStateChange(() => {});
+    let mounted = true;
+    async function initialize() {
+      const params = new URLSearchParams(window.location.search);
+      const tokenHash = params.get("token_hash");
+      const type = params.get("type");
+      if (tokenHash && (type === "invite" || type === "recovery")) {
+        window.history.replaceState(null, "", "/reset-password");
+        const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+        if (error) throw error;
+      }
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session) throw new Error("Invalid session");
     }
-    setStatus("ready");
-  }, [params]);
-
-  async function onSubmit(e: React.FormEvent) {
+    initialization.current ??= initialize();
+    initialization.current
+      .then(() => {
+        if (mounted) setReady(true);
+      })
+      .catch(() => {
+        if (mounted)
+          setError(
+            "This setup link is invalid or expired. Ask an admin for a new link, or use Forgot password on the login page.",
+          );
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    try {
-      setStatus("updating");
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      setStatus("done");
-    } catch {
-      setStatus("error");
+    setError("");
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setBusy(false);
+    if (error) setError(error.message);
+    else {
+      setDone(true);
+      await supabase.auth.signOut();
     }
   }
-
   return (
     <div className="container max-w-md py-12">
-      <h1 className="mb-4 text-2xl font-semibold">Reset password</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <label className="block text-sm">
-          New password
-          <Input
-            type="password"
-            required
-            className="mt-1"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-        <Button type="submit" disabled={status === "updating"}>
-          {status === "updating" ? "Updating…" : "Update password"}
-        </Button>
-      </form>
-      {status === "done" && (
-        <div className="mt-4 rounded-md border border-border p-3 text-sm text-muted-foreground">
-          Password updated. You can close this tab.
-        </div>
+      <h1 className="mb-4 text-2xl font-semibold">Set your password</h1>
+      {done ? (
+        <p role="status">
+          Password saved.{" "}
+          <Link className="underline" href="/login">
+            Sign in
+          </Link>{" "}
+          to continue.
+        </p>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          <label className="block text-sm">
+            New password
+            <Input
+              className="mt-1"
+              type="password"
+              autoComplete="new-password"
+              minLength={12}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <p className="text-sm text-muted-foreground">Use at least 12 characters.</p>
+          <label className="block text-sm">
+            Confirm password
+            <Input
+              className="mt-1"
+              type="password"
+              autoComplete="new-password"
+              minLength={12}
+              required
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </label>
+          <Button disabled={!ready || busy} type="submit">
+            {busy ? "Saving…" : "Save password"}
+          </Button>
+        </form>
       )}
-      {status === "error" && (
-        <div className="mt-4 rounded-md border border-border p-3 text-sm text-red-600">
-          Failed to update password. Try again.
-        </div>
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-red-700">
+          {error}
+        </p>
       )}
     </div>
   );
 }
-
-

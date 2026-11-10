@@ -1,3 +1,4 @@
+import { checkAdminRequest } from "@/lib/adminAuth";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripe } from "@/lib/stripeClient";
@@ -5,33 +6,21 @@ import { stripe } from "@/lib/stripeClient";
 export const runtime = "nodejs";
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ orderId: string }> }
 ) {
+  const access = await checkAdminRequest(req);
+  if (access.response) return access.response;
   const { orderId } = await context.params;
   if (!orderId) {
     return NextResponse.json({ error: "missing_order_id" }, { status: 400 });
   }
 
-  // Fetch order with Stripe charge or session to derive payment intent
-  // Try matching by order UUID or by stripe_session_id (just in case the client passed a session id)
-  let { data: order, error } = await supabaseAdmin
-    .from("orders")
-    .select("*")
-    .or(`id.eq.${orderId},stripe_session_id.eq.${orderId}`)
-    .limit(1)
-    .maybeSingle();
-
-  // Fallback: in case a Checkout Session ID was passed by mistake
-  if ((!order || error) && !order && orderId) {
-    const fallback = await supabaseAdmin
-      .from("orders")
-      .select("*")
-      .eq("stripe_session_id", orderId)
-      .maybeSingle();
-    order = fallback.data as typeof order;
-    error = fallback.error ?? null;
-  }
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
+  const isSession = /^cs_(test_|live_)?[a-zA-Z0-9]+$/.test(orderId);
+  if (!isUuid && !isSession) return NextResponse.json({ error: "invalid_order_id" }, { status: 400 });
+  const { data: order, error } = await supabaseAdmin.from("orders").select("*")
+    .eq(isUuid ? "id" : "stripe_session_id", orderId).maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: "order_lookup_failed", detail: error.message }, { status: 500 });
@@ -85,7 +74,7 @@ export async function POST(
     }
 
     // Issue full refund
-    await stripe.refunds.create({ charge: chargeId });
+    await stripe.refunds.create({ charge: chargeId }, { idempotencyKey: `full-refund-${order.id}` });
 
     // Update order status to refunded
     await supabaseAdmin.from("orders").update({ status: "refunded" }).eq("id", order.id);

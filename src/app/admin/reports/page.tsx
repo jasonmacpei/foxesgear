@@ -1,148 +1,123 @@
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { stripe } from "@/lib/stripeClient";
-
-function fmt(n: number) {
-  return `$${(n / 100).toFixed(2)}`;
-}
+import { requireAdminPage } from "@/lib/adminAuth";
+import { resolveSeason } from "@/lib/seasons";
+import { getSeasonReport } from "@/lib/seasonReports";
+import { SeasonSelector } from "@/components/SeasonSelector";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
+const fmt = (n: number) => `$${(n / 100).toFixed(2)}`;
 
-export default async function AdminReportsPage() {
-  const { data: printerRaw } = await supabaseAdmin
-    .from("order_items")
-    .select("product_name, size_value, color_value, quantity, orders!inner(status)")
-    .eq("orders.status", "paid")
-    .order("product_name")
-    .order("size_value")
-    .order("color_value");
-
-  const groupKey = (r: any) => `${r.product_name}|${r.size_value ?? ""}|${r.color_value ?? ""}`;
-  const grouped = new Map<string, number>();
-  for (const r of printerRaw ?? []) {
-    grouped.set(groupKey(r), (grouped.get(groupKey(r)) ?? 0) + (r.quantity as number));
-  }
-  const printer = Array.from(grouped.entries()).map(([k, qty]) => {
-    const [product_name, size, color] = k.split("|");
-    return { product_name, size, color, qty };
-  });
-
-  const { data: salesRaw } = await supabaseAdmin
-    .from("order_items")
-    .select("product_name, line_total_cents, quantity, orders!inner(status)")
-    .eq("orders.status", "paid")
-    .order("product_name");
-  const totals = new Map<string, { revenue_cents: number; qty: number }>();
-  for (const r of salesRaw ?? []) {
-    const t = totals.get(r.product_name) ?? { revenue_cents: 0, qty: 0 };
-    t.revenue_cents += (r.line_total_cents as number);
-    t.qty += (r.quantity as number);
-    totals.set(r.product_name, t);
-  }
-  const sales = Array.from(totals.entries()).map(([product_name, v]) => ({
-    product_name,
-    revenue_cents: v.revenue_cents,
-    qty: v.qty,
-  }));
-
-  const totalRevenueCents = sales.reduce((s, r) => s + r.revenue_cents, 0);
-
-  // Best-effort Stripe fee summary (aggregated), optional if permissions allow
-  let stripeSummary: { gross: number; fee: number; net: number } | null = null;
-  try {
-    const bt = await stripe.balanceTransactions.list({ limit: 100 });
-    let gross = 0,
-      fee = 0,
-      net = 0;
-    for (const t of bt.data) {
-      if (t.type === "charge") {
-        gross += t.amount;
-        fee += t.fee ?? 0;
-        net += t.net;
-      }
-    }
-    stripeSummary = { gross: gross / 100, fee: fee / 100, net: net / 100 };
-  } catch {
-    stripeSummary = null;
-  }
-
+export default async function AdminReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ season?: string }>;
+}) {
+  await requireAdminPage();
+  const params = await searchParams;
+  const selection = await resolveSeason(params.season).catch(() => null);
+  if (!selection) notFound();
+  const { seasons, season } = selection;
+  const report = await getSeasonReport(season.id);
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-semibold">Reports</h2>
-      <div className="mb-4 flex gap-3">
-        <a href="/api/reports/printer" className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">
+      <h2 className="mb-4 text-2xl font-semibold">Reports</h2>
+      <SeasonSelector seasons={seasons} selected={season.id} />
+      <p className="mb-4 text-sm text-muted-foreground">
+        {season.name} · Paid live orders only. Test orders and refunded orders are excluded.
+      </p>
+      <div className="mb-6 flex flex-wrap gap-3">
+        <a
+          href={`/api/reports/printer?season=${season.id}`}
+          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+        >
           Export Printer CSV
         </a>
-        <a href="/api/reports/sales" className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">
+        <a
+          href={`/api/reports/sales?season=${season.id}`}
+          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+        >
           Export Sales CSV
         </a>
       </div>
-
-      <div className="grid gap-8 md:grid-cols-2">
-        <div className="rounded-lg border border-border">
-          <div className="border-b px-4 py-3 font-medium">Printer Summary</div>
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-border p-4">
+          <div className="text-sm text-muted-foreground">Paid orders</div>
+          <div className="text-xl font-semibold">{report.orderCount}</div>
+        </div>
+        <div className="rounded-lg border border-border p-4">
+          <div className="text-sm text-muted-foreground">Revenue</div>
+          <div className="text-xl font-semibold">{fmt(report.revenueCents)}</div>
+        </div>
+        <div className="rounded-lg border border-border p-4">
+          <div className="text-sm text-muted-foreground">Stripe fees</div>
+          <div className="text-xl font-semibold">
+            {report.feeCents === null ? "Unavailable" : fmt(report.feeCents)}
+          </div>
+        </div>
+      </div>
+      {report.missingFees > 0 && (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Fee and net totals are unavailable because {report.missingFees} order(s) have no saved
+          Stripe fee details.
+        </p>
+      )}
+      {report.orderCount === 0 && (
+        <p className="mb-4 rounded-lg border border-border p-4 text-sm">
+          No paid live orders for this season yet.
+        </p>
+      )}
+      <div className="grid gap-6 xl:grid-cols-2">
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <h3 className="border-b border-border px-4 py-3 font-semibold">Printer Summary</h3>
           <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-muted-foreground">
+            <thead className="bg-muted/60">
               <tr>
-                <th className="px-3 py-2 text-left">Product</th>
-                <th className="px-3 py-2 text-left">Size</th>
-                <th className="px-3 py-2 text-left">Color</th>
-                <th className="px-3 py-2 text-right">Qty</th>
+                <th className="p-3 text-left">Product</th>
+                <th className="p-3 text-left">Size</th>
+                <th className="p-3 text-left">Color</th>
+                <th className="p-3 text-right">Qty</th>
               </tr>
             </thead>
             <tbody>
-              {printer.map((r) => (
-                <tr key={`${r.product_name}-${r.size}-${r.color}`} className="border-t border-border">
-                  <td className="px-3 py-2">{r.product_name}</td>
-                  <td className="px-3 py-2">{r.size}</td>
-                  <td className="px-3 py-2">{r.color}</td>
-                  <td className="px-3 py-2 text-right">{r.qty}</td>
+              {report.printer.map((r) => (
+                <tr
+                  key={JSON.stringify([r.product_name, r.size, r.color])}
+                  className="border-t border-border"
+                >
+                  <td className="p-3">{r.product_name}</td>
+                  <td className="p-3">{r.size}</td>
+                  <td className="p-3">{r.color}</td>
+                  <td className="p-3 text-right">{r.qty}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-        <div className="rounded-lg border border-border">
-          <div className="border-b px-4 py-3 font-medium">Sales Summary</div>
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <h3 className="border-b border-border px-4 py-3 font-semibold">Sales Summary</h3>
           <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-muted-foreground">
+            <thead className="bg-muted/60">
               <tr>
-                <th className="px-3 py-2 text-left">Product</th>
-                <th className="px-3 py-2 text-right">Qty</th>
-                <th className="px-3 py-2 text-right">Revenue</th>
+                <th className="p-3 text-left">Product</th>
+                <th className="p-3 text-right">Revenue</th>
+                <th className="p-3 text-right">Qty</th>
               </tr>
             </thead>
             <tbody>
-              {sales.map((r) => (
+              {report.sales.map((r) => (
                 <tr key={r.product_name} className="border-t border-border">
-                  <td className="px-3 py-2">{r.product_name}</td>
-                  <td className="px-3 py-2 text-right">{r.qty}</td>
-                  <td className="px-3 py-2 text-right">{fmt(r.revenue_cents)}</td>
+                  <td className="p-3">{r.product_name}</td>
+                  <td className="p-3 text-right">{fmt(r.revenue_cents)}</td>
+                  <td className="p-3 text-right">{r.qty}</td>
                 </tr>
               ))}
-              <tr className="border-t border-border font-semibold">
-                <td className="px-3 py-2 text-right" colSpan={2}>
-                  Total
-                </td>
-                <td className="px-3 py-2 text-right">{fmt(totalRevenueCents)}</td>
-              </tr>
             </tbody>
           </table>
-          <div className="px-4 py-3 text-sm text-muted-foreground">
-            {stripeSummary ? (
-              <div>
-                Stripe summary (recent): Gross ${stripeSummary.gross.toFixed(2)} · Fee ${stripeSummary.fee.toFixed(
-                  2,
-                )} · Net ${stripeSummary.net.toFixed(2)}
-              </div>
-            ) : (
-              <div>Stripe fee summary unavailable (insufficient permissions).</div>
-            )}
+          <div className="border-t border-border p-3 text-sm">
+            Net after Stripe fees: {report.netCents === null ? "Unavailable" : fmt(report.netCents)}
           </div>
         </div>
       </div>
     </div>
   );
 }
-
-

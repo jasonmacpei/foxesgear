@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.2.0 (2026-11-10)
+
+### Features
+
+* **admin:** create user accounts and private password-setup links, manage admin permissions, and disable or re-enable accounts with self-lockout protection.
+* **seasons:** separate basketball seasons across dashboard, orders, reports, and CSV exports; preserve all 62 historical orders in 2025–2026 and use 2026–2027 for new checkouts.
+
+### Security and fixes
+
+* Verify sessions and live admin permissions on server-rendered pages, settings actions, refunds, backfills, user management, and report exports; require same-origin administrative mutations.
+* Harden database permissions and privileged functions, escape receipt HTML, neutralize CSV formulas, and add defensive HTTP headers.
+* Update Next.js, React, Supabase clients, and compatible dependency patches; production dependency audit reports zero vulnerabilities.
+* Calculate season totals from saved orders and display missing Stripe fee details as unavailable.
+
+### Upgrade notes
+
+* Existing admins must sign in again to establish the server-readable session. New accounts require a private password-setup link.
+* Database migrations have been applied to the existing FoxesGear database. The backfill endpoint now requires a signed-in admin session instead of ADMIN_BACKFILL_TOKEN.
+
 ### [0.1.7](https://github.com/jasonmacpei/foxesgear/compare/v0.1.5...v0.1.7) (2025-11-13)
 
 ### [0.1.6](https://github.com/jasonmacpei/foxesgear/compare/v0.1.5...v0.1.6) (2025-11-13)

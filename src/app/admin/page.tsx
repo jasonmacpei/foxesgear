@@ -1,13 +1,30 @@
+import { resolveSeason } from "@/lib/seasons";
+import { getSeasonReport } from "@/lib/seasonReports";
+import { SeasonSelector } from "@/components/SeasonSelector";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireAdminPage } from "@/lib/adminAuth";
 export const dynamic = "force-dynamic";
 import { getSiteSettings } from "@/lib/settings";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { revalidatePath } from "next/cache";
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ season?: string }>;
+}) {
+  await requireAdminPage();
+  const params = await searchParams;
+  const selection = await resolveSeason(params.season).catch(() => null);
+  if (!selection) notFound();
+  const { seasons, season } = selection;
+  const report = await getSeasonReport(season.id);
   const settings = await getSiteSettings();
 
   async function updateSettings(formData: FormData) {
     "use server";
+    await requireAdminPage();
     const storeClosed = formData.get("store_closed") === "on";
     const message = String(formData.get("store_closed_message") ?? "").trim();
     // Ensure the settings row exists; create or update atomically
@@ -29,7 +46,25 @@ export default async function AdminDashboardPage() {
     <div className="space-y-8">
       <div>
         <h2 className="mb-2 text-2xl font-semibold">Dashboard</h2>
-        <p className="text-zinc-600">Sales, orders, and revenue overview will appear here.</p>
+        <SeasonSelector seasons={seasons} selected={season.id} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-border p-4">
+            <div className="text-sm text-muted-foreground">Paid live orders</div>
+            <div className="text-2xl font-semibold">{report.orderCount}</div>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <div className="text-sm text-muted-foreground">Season revenue</div>
+            <div className="text-2xl font-semibold">${(report.revenueCents / 100).toFixed(2)}</div>
+          </div>
+        </div>
+        <div className="mt-4 flex gap-4 text-sm">
+          <Link className="underline" href={`/admin/orders?season=${season.id}`}>
+            View orders
+          </Link>
+          <Link className="underline" href={`/admin/reports?season=${season.id}`}>
+            View reports
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
@@ -69,5 +104,3 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
-
-

@@ -1,8 +1,13 @@
+import { seasonForStripeSession } from "@/lib/seasons";
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripeClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resend } from "@/lib/resendClient";
 import type Stripe from "stripe";
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +32,8 @@ export async function POST(req: NextRequest) {
   const typed = event as Stripe.Event;
   if (typed.type === "checkout.session.completed") {
     const session = typed.data.object as Stripe.Checkout.Session;
+    if (session.payment_status !== "paid") return NextResponse.json({ received: true });
+    const season = await seasonForStripeSession(session);
     const email = session.customer_details?.email ?? session.customer_email ?? "";
     // Expand product so we can read product_data.metadata (size/color/slug)
     const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
@@ -40,6 +47,8 @@ export async function POST(req: NextRequest) {
       .from("orders")
       .insert({
         email,
+        season_id: season.id,
+        created_at: new Date(session.created * 1000).toISOString(),
         customer_name: meta.customer_name ?? "",
         affiliated_player: meta.affiliated_player ?? "",
         affiliated_group: meta.affiliated_group ?? "",
@@ -155,10 +164,10 @@ export async function POST(req: NextRequest) {
         const currency = "CAD";
         const rowsHtml = itemsForEmail
           .map((it) => {
-            const variantBits = [it.size ? `Size: ${it.size}` : null, it.color ? `Color: ${it.color}` : null]
+            const variantBits = [it.size ? `Size: ${escapeHtml(it.size)}` : null, it.color ? `Color: ${escapeHtml(it.color)}` : null]
               .filter(Boolean)
               .join(" · ");
-            const nameCell = it.productName;
+            const nameCell = escapeHtml(it.productName);
             return `
               <tr>
                 <td style=\"padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#111827\">${nameCell}${variantBits ? `<div style=\\"color:#6b7280;font-size:12px\\">${variantBits}</div>` : ""}</td>
@@ -172,11 +181,11 @@ export async function POST(req: NextRequest) {
         const customerBlock = `
           <div style=\"margin:16px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb\">
             <div style=\"font-weight:600;margin-bottom:6px\">Customer</div>
-            <div style=\"color:#111827\">${meta.customer_name ?? ""}</div>
-            <div style=\"color:#6b7280\">${email}</div>
-            <div style=\"margin-top:8px;color:#111827\">Affiliated Player: ${meta.affiliated_player ?? ""}</div>
-            <div style=\"color:#111827\">Group: ${meta.affiliated_group ?? ""}</div>
-            <div style=\"color:#111827\">Phone: ${meta.phone ?? ""}</div>
+            <div style=\"color:#111827\">${escapeHtml(meta.customer_name ?? "")}</div>
+            <div style=\"color:#6b7280\">${escapeHtml(email)}</div>
+            <div style=\"margin-top:8px;color:#111827\">Affiliated Player: ${escapeHtml(meta.affiliated_player ?? "")}</div>
+            <div style=\"color:#111827\">Group: ${escapeHtml(meta.affiliated_group ?? "")}</div>
+            <div style=\"color:#111827\">Phone: ${escapeHtml(meta.phone ?? "")}</div>
           </div>`;
 
         const html = `

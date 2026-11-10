@@ -1,3 +1,5 @@
+import { siteOrigin } from "@/lib/siteOrigin";
+import { resolveSeason } from "@/lib/seasons";
 import { getSiteSettings } from "@/lib/settings";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -5,17 +7,17 @@ import { stripe } from "@/lib/stripeClient";
 import { supabase } from "@/lib/supabaseClient";
 
 const ItemSchema = z.object({
-  variantId: z.string(),
+  variantId: z.string().uuid(),
   productName: z.string(),
   size: z.string().nullable().optional(),
   color: z.string().nullable().optional(),
   unitPriceCents: z.number().int().nonnegative(),
-  quantity: z.number().int().positive(),
+  quantity: z.number().int().positive().max(100),
 });
 
 const CustomerSchema = z.object({
-  name: z.string().min(1),
-  affiliatedPlayer: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  affiliatedPlayer: z.string().trim().min(1).max(100),
   affiliatedGroup: z.enum([
     "Tykes - Kindegarden",
     "Small Ball Girls (Gr 1-2)",
@@ -27,8 +29,8 @@ const CustomerSchema = z.object({
     "Mini Girls Rep (Gr 5-6)",
     "Mini Boys Rep (Gr 5-6)",
   ]),
-  phone: z.string().min(1),
-  email: z.string().email(),
+  phone: z.string().trim().min(1).max(40),
+  email: z.string().trim().email().max(254),
 });
 
 export async function POST(req: NextRequest) {
@@ -41,9 +43,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "store_closed", detail: message }, { status: 403 });
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
   const parse = z
-    .object({ items: z.array(ItemSchema).min(1), customer: CustomerSchema })
+    .object({ items: z.array(ItemSchema).min(1).max(100), customer: CustomerSchema })
     .safeParse(body);
   if (!parse.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -84,7 +86,7 @@ export async function POST(req: NextRequest) {
   const lineItems = [] as any[];
   for (const item of items) {
     const v = variantIdToVariant.get(item.variantId);
-    if (!v || !v.active) {
+    if (!v || !v.active || !(products ?? []).some((p) => p.id === v.product_id && p.active)) {
       return NextResponse.json({ error: "invalid_variant" }, { status: 400 });
     }
     if (!v.price_cents || v.price_cents <= 0) {
@@ -126,19 +128,21 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const { season } = await resolveSeason();
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
       line_items: lineItems,
       customer_email: customer.email,
       metadata: {
+        season_id: season.id,
         customer_name: customer.name,
         affiliated_player: customer.affiliatedPlayer,
         affiliated_group: customer.affiliatedGroup,
         phone: customer.phone,
       },
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/checkout`,
+      success_url: `${siteOrigin()}/success`,
+      cancel_url: `${siteOrigin()}/checkout`,
     });
 
     return NextResponse.json({ url: session.url });
@@ -148,5 +152,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "stripe_session_failed", detail: message }, { status: 500 });
   }
 }
-
-

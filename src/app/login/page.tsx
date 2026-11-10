@@ -31,10 +31,12 @@ export default function LoginPage() {
   return (
     <div className="container max-w-md py-12">
       <h1 className="mb-4 text-2xl font-semibold">Login</h1>
+      <p className="mb-4 text-sm text-muted-foreground">Sign in with an account added by an admin. If you recently lost access, sign in again.</p>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm">
           Email
           <Input
+            autoComplete="email"
             type="email"
             required
             className="mt-1"
@@ -45,6 +47,7 @@ export default function LoginPage() {
         <label className="block text-sm">
           Password
           <Input
+            autoComplete="current-password"
             type="password"
             required
             className="mt-1"

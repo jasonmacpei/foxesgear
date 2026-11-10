@@ -57,3 +57,17 @@ Apply schema, RLS, then seed initial data via Supabase SQL editor or CLI:
 ```
 
 
+
+### Admin users and seasons
+
+Sign in again after this update so the server can verify your cookie-based session.
+
+- **Admin → Users:** create accounts with a private password-setup link, grant or remove admin access, and disable/re-enable accounts. Share setup links privately. No invitation email is sent automatically.
+- **Admin → Seasons:** create a basketball season and select the current season for new checkouts. Historical orders remain in their original season.
+- **Dashboard / Orders / Reports:** select 2025–2026 or 2026–2027. CSV exports use the same season as the report. Paid-live reports exclude test and refunded orders.
+
+For a new database, the original schema/RLS SQL above is only the legacy baseline. Apply the SQL files in `supabase/migrations/` in filename order afterward. Do not rerun the legacy RLS file on an upgraded database. The November 10 migrations have already been applied to the existing FoxesGear database.
+
+See [SECURITY_REVIEW.md](SECURITY_REVIEW.md) for findings, verification scope, and remaining follow-ups. `ADMIN_BACKFILL_TOKEN` is retired by the updated backfill endpoint; that endpoint now requires a signed-in admin session and same-origin request.
+
+Authenticated integration QA is opt-in: start a local production build, then run `FOXESGEAR_LIVE_QA=1 npm test -- tests/admin-security.spec.ts --workers=1`. It uses an ephemeral admin session and a disposable Auth account, cleaned up afterward, without sending emails or changing existing orders.

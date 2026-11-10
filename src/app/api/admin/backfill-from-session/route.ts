@@ -1,3 +1,5 @@
+import { seasonForStripeSession } from "@/lib/seasons";
+import { checkAdminRequest } from "@/lib/adminAuth";
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripeClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -7,10 +9,8 @@ import type Stripe from "stripe";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("x-admin-token");
-  if (!token || token !== process.env.ADMIN_BACKFILL_TOKEN) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
+  const access = await checkAdminRequest(req);
+  if (access.response) return access.response;
 
   const { sessionId } = await req.json().catch(() => ({ sessionId: undefined }));
   if (!sessionId) {
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "session_not_paid" }, { status: 400 });
     }
 
+    const season = await seasonForStripeSession(session);
     const email = session.customer_details?.email ?? session.customer_email ?? "";
     const meta = (session.metadata ?? {}) as Record<string, string>;
 
@@ -44,6 +45,8 @@ export async function POST(req: NextRequest) {
         .from("orders")
         .insert({
           email,
+          season_id: season.id,
+          created_at: new Date(session.created * 1000).toISOString(),
           customer_name: meta.customer_name ?? "",
           affiliated_player: meta.affiliated_player ?? "",
           affiliated_group: meta.affiliated_group ?? "",

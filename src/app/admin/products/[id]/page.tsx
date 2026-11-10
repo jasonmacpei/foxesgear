@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/adminAuth";
 import { supabase } from "@/lib/supabaseClient";
 import { ProductForm } from "../ProductForm";
 import { VariantManager } from "../VariantManager";
@@ -5,6 +6,7 @@ import { VariantManager } from "../VariantManager";
 type Props = { params: Promise<{ id: string }> };
 
 export default async function AdminEditProductPage({ params }: Props) {
+  await requireAdminPage();
   const { id } = await params;
   const { data: product } = await supabase
     .from("products")

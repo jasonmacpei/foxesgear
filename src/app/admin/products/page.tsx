@@ -1,8 +1,10 @@
+import { requireAdminPage } from "@/lib/adminAuth";
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 
 export default async function AdminProductsPage() {
+  await requireAdminPage();
   const { data: products } = await supabase
     .from("products")
     .select("id, name, slug, active, sort_order")
