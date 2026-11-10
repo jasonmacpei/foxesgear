@@ -9,6 +9,7 @@ type UserRow = {
   email: string;
   fullName: string;
   isAdmin: boolean;
+  isOwner: boolean;
   disabled: boolean;
   lastSignIn: string | null;
 };
@@ -87,8 +88,8 @@ export function UsersManager() {
       <div>
         <h2 className="text-2xl font-semibold">Users</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Add accounts and control admin access. Admins can manage the store, orders, refunds,
-          seasons, and other users. Standard users have no admin access.
+          Only you, the protected store owner, can add users or change their access. Admins can
+          manage products, orders, refunds, and seasons. Standard users have no admin access.
         </p>
       </div>
       <form
@@ -187,7 +188,13 @@ export function UsersManager() {
                   <div className="text-muted-foreground">{u.email}</div>
                 </td>
                 <td className="p-3">
-                  {u.disabled ? "Disabled" : u.isAdmin ? "Admin" : "Standard"}
+                  {u.isOwner
+                    ? "Owner · protected"
+                    : u.disabled
+                      ? "Disabled"
+                      : u.isAdmin
+                        ? "Admin"
+                        : "Standard"}
                 </td>
                 <td className="p-3">
                   {u.lastSignIn
@@ -205,7 +212,7 @@ export function UsersManager() {
                     >
                       Setup link
                     </button>
-                    {u.id !== currentId && (
+                    {!u.isOwner && u.id !== currentId && (
                       <>
                         <button
                           className="underline disabled:opacity-40"

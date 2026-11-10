@@ -65,15 +65,9 @@ test.describe("authenticated admin and season checks", () => {
     "Set FOXESGEAR_LIVE_QA=1 against the local server for disposable live Auth QA",
   );
   test.beforeAll(async () => {
-    const { data: profile, error } = await service
-      .from("profiles")
-      .select("id")
-      .eq("is_admin", true)
-      .eq("is_disabled", false)
-      .limit(1)
-      .single();
-    if (error) throw error;
-    const { data: account } = await service.auth.admin.getUserById(profile.id);
+    const { data: ownerId, error } = await service.rpc("store_owner_id");
+    if (error || !ownerId) throw error || new Error("Owner not configured");
+    const { data: account } = await service.auth.admin.getUserById(ownerId);
     const { data: link, error: linkError } = await service.auth.admin.generateLink({
       type: "magiclink",
       email: account.user!.email!,
@@ -151,6 +145,7 @@ test.describe("authenticated admin and season checks", () => {
     await page.goto("/admin/users");
     await expect(page.getByRole("heading", { name: "Add user" })).toBeVisible();
     await expect(page.getByText("(you)", { exact: false })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Owner · protected", exact: true })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole("navigation", { name: "Admin", exact: true })).toBeVisible();
     expect(
@@ -219,7 +214,32 @@ test.describe("authenticated admin and season checks", () => {
           })
         ).status(),
       ).toBe(200);
-      expect((await page.request.get("/api/admin/users")).status()).toBe(200);
+      // Store admins retain product tools, but user management belongs only to the owner.
+      expect((await page.request.get("/api/admin/users")).status()).toBe(403);
+      expect(
+        (
+          await page.request.post("/api/admin/users", {
+            headers: { Origin: baseURL },
+            data: { email: `blocked-${email}`, fullName: "Blocked user", isAdmin: true },
+          })
+        ).status(),
+      ).toBe(403);
+      for (const data of [
+        { action: "access", userId: users.currentUserId, isAdmin: false, disabled: true },
+        { action: "access", userId: testUserId, isAdmin: false, disabled: true },
+        { action: "setup-link", userId: users.currentUserId },
+      ])
+        expect(
+          (
+            await page.request.patch("/api/admin/users", { headers: { Origin: baseURL }, data })
+          ).status(),
+        ).toBe(403);
+      await page.goto("/admin/products/new");
+      await expect(page.getByRole("heading", { name: "New product", exact: true })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Users", exact: true })).toHaveCount(0);
+      await page.goto("/admin/users");
+      await expect(page).toHaveURL(/\/admin\?reason=owner-only/);
+      await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
       expect(
         (
           await adminApi.patch("/api/admin/users", {

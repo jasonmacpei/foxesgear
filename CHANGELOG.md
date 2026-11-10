@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.3.0 (2026-11-10)
+
+### Features and security
+
+* **owner:** designate Jason's existing account as the sole protected store owner. Only the owner can add accounts, generate setup links, grant/revoke admin access, and disable/re-enable users.
+* **permissions:** retain product publishing, orders, refunds, reports, and seasons for other admins; hide user management from their navigation and enforce the restriction on every user API and database role change.
+* **protection:** prevent owner deletion, disabling, demotion, email replacement, or ownership transfer with database constraints and integrity triggers. Other admins cannot enumerate staff profiles.
+* **validation:** test owner integrity protections and staff product publishing in rolled-back database transactions; test owner-only account management through the browser and API.
+
+### Upgrade notes
+
+* Existing non-owner admins retain store management access but can no longer manage accounts. Ownership cannot be transferred through the application.
+
 ## 0.2.0 (2026-11-10)
 
 ### Features

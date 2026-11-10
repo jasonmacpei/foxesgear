@@ -18,9 +18,9 @@ Framework guidance: [Next.js security advisories](https://github.com/vercel/next
 
 ## Users
 
-`/admin/users` supports creating an account and a private, expiring password-setup link, generating a replacement setup link, granting/revoking admin access, and disabling/re-enabling an account. Links are returned only to admins and are not emailed automatically. New users choose their own password, with a 12-character minimum in the setup form. Existing users will need to sign in again to establish the server-readable cookie session.
+`/admin/users` supports creating an account and a private, expiring password-setup link, generating a replacement setup link, granting/revoking admin access, and disabling/re-enabling an account. Links are returned only to the owner and are not emailed automatically. New users choose their own password, with a 12-character minimum in the setup form. Existing users will need to sign in again to establish the server-readable cookie session.
 
-Role changes use a service-only database function that serializes concurrent changes, verifies the acting admin, and refuses self-demotion/disable. Disabled users lose admin and database administration permissions immediately; their sign-in is also banned. Admins can manage every store function, including users and refunds; standard accounts have no admin access.
+Role changes use a service-only database function that serializes concurrent changes, verifies the acting owner, and refuses any change to the owner account. Disabled users lose admin and database administration permissions immediately; their sign-in is also banned. The sole protected owner can manage users and every store function. Other admins can manage products, orders, refunds, reports, and seasons; standard accounts have no admin access.
 
 ## Seasons
 
@@ -47,3 +47,11 @@ Database permission hardening and additive season/fee migrations have been appli
 - Transaction-rollback database checks verified role grants, disabling, self-lockout rejection, season-overlap rejection, and zero anonymous order/profile visibility.
 - Production dependency audit reported zero vulnerabilities; eight moderate development-only advisories remain.
 - Review preview: https://foxesgear-i6u46lds8-jasonmacpei-hotmailcoms-projects.vercel.app (Vercel authentication protected). Production release 0.2.0 was explicitly authorized November 10, 2026.
+
+## Protected owner update — v0.3.0
+
+Jason’s existing `jasonmacpei@hotmail.com` account is the sole owner, anchored to its Auth user ID in a private, immutable registry. Database constraints and integrity triggers reject deleting or demoting the owner profile, deleting/disabling the Auth account, replacing its email, and transferring/removing the registry. Password updates and ordinary sign-ins remain available. Infrastructure administrators with direct schema-control privileges remain outside the application role model.
+
+User pages and GET/POST/PATCH account APIs require the owner; ordinary admins cannot create users, generate setup/recovery links, change roles, or disable accounts. The user list labels Jason as “Owner · protected.” Product publishing and other store tools remain available to existing admins. The database profile policy permits staff to read only their own profile.
+
+Transaction-rollback tests confirmed owner grant/revoke authority, rejection of staff role changes, protected owner deletion/ban/demotion, immutable ownership, restricted profile visibility, and successful active-product insertion by staff. Browser integration tests cover the same application boundary without modifying any existing products or accounts.

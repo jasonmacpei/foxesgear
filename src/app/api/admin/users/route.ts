@@ -1,6 +1,6 @@
 import { siteOrigin } from "@/lib/siteOrigin";
 import { NextRequest, NextResponse } from "next/server";
-import { checkAdminRequest } from "@/lib/adminAuth";
+import { checkOwnerRequest } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { z } from "zod";
 
@@ -32,7 +32,7 @@ function setupLink(tokenHash: string, type: "invite" | "recovery") {
 }
 
 export async function GET(req: NextRequest) {
-  const access = await checkAdminRequest(req);
+  const access = await checkOwnerRequest(req);
   if (access.response) return access.response;
   const page = Math.max(1, Number(req.nextUrl.searchParams.get("page") || 1));
   if (!Number.isSafeInteger(page))
@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
           email: u.email,
           fullName: p?.full_name ?? "",
           isAdmin: p?.is_admin ?? false,
+          isOwner: u.id === access.user.id,
           disabled: p?.is_disabled ?? false,
           lastSignIn: u.last_sign_in_at ?? null,
         };
@@ -69,7 +70,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const access = await checkAdminRequest(req);
+  const access = await checkOwnerRequest(req);
   if (access.response) return access.response;
   const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success)
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const access = await checkAdminRequest(req);
+  const access = await checkOwnerRequest(req);
   if (access.response) return access.response;
   const parsed = updateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid user update" }, { status: 400 });
@@ -150,7 +151,10 @@ export async function PATCH(req: NextRequest) {
   });
   if (error)
     return NextResponse.json(
-      { error: "Access change refused. You cannot change your own access; reload and try again." },
+      {
+        error:
+          "Access change refused. The owner account is protected; only the owner can manage other users.",
+      },
       { status: 400 },
     );
   const { error: signInError } = await supabaseAdmin.auth.admin.updateUserById(input.userId, {

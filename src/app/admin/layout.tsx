@@ -2,10 +2,10 @@ import Link from "next/link";
 import { requireAdminPage } from "@/lib/adminAuth";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdminPage();
+  const user = await requireAdminPage();
   return (
     <div className="container py-10">
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Admin</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight">{user.isOwner ? "Owner" : "Admin"}</h1>
 
       {/* Mobile top nav */}
       <nav className="mb-6 flex flex-wrap gap-3 text-sm md:hidden" aria-label="Admin">
@@ -30,12 +30,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         >
           Reports
         </Link>
-        <Link
-          href="/admin/users"
-          className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
-        >
-          Users
-        </Link>
+        {user.isOwner && (
+          <Link
+            href="/admin/users"
+            className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
+          >
+            Users
+          </Link>
+        )}
         <Link
           href="/admin/seasons"
           className="rounded-md border border-border px-3 py-1.5 hover:bg-muted"
@@ -59,9 +61,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <Link href="/admin/reports" className="rounded-md px-3 py-2 hover:bg-muted">
               Reports
             </Link>
-            <Link href="/admin/users" className="rounded-md px-3 py-2 hover:bg-muted">
-              Users
-            </Link>
+            {user.isOwner && (
+              <Link href="/admin/users" className="rounded-md px-3 py-2 hover:bg-muted">
+                Users
+              </Link>
+            )}
             <Link href="/admin/seasons" className="rounded-md px-3 py-2 hover:bg-muted">
               Seasons
             </Link>
