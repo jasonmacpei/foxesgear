@@ -62,7 +62,7 @@ Apply schema, RLS, then seed initial data via Supabase SQL editor or CLI:
 
 Sign in again after this update so the server can verify your cookie-based session.
 
-- **Owner → Users:** only the protected owner (Jason’s existing account) can create accounts, generate private password-setup links, grant/revoke admin access, and disable/re-enable accounts. Other admins retain product publishing and store management but cannot manage users. Share setup links privately; no invitation email is sent automatically.
+- **Owner → Users:** only the protected owner (Jason’s existing account) can create accounts, generate private password-setup links, grant/revoke admin access, and disable/re-enable accounts. Other admins retain product publishing and store management but cannot manage users. Click Share access beside a person to open an invitation labelled with their name and email. Copy invitation includes instructions; Open email draft addresses it to that person, but you still press Send in your email app. No invitation email is sent automatically.
 - **Admin → Seasons:** create a basketball season and select the current season for new checkouts. Historical orders remain in their original season.
 - **Dashboard / Orders / Reports:** select 2025–2026 or 2026–2027. CSV exports use the same season as the report. Paid-live reports exclude test and refunded orders.
 

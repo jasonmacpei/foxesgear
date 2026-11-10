@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.3.2 (2026-11-10)
+
+### User experience
+
+* Replace the anonymous setup-link box with a sharing window labelled with the recipient's name and email, using identity returned by the server.
+* Provide a ready-to-copy invitation and an addressed email draft; clearly state that FoxesGear has not sent an email and that the draft still needs to be sent by the owner.
+* Rename the user action to Share access, keep the raw link under Show link only, and provide clipboard fallback with one clear result at a time.
+* Verify recipient switching, email-draft addressing, clipboard failure/recovery, keyboard dismissal, and mobile layout.
+
 ## 0.3.1 (2026-11-10)
 
 ### Security

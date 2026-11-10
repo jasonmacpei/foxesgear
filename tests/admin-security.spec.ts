@@ -172,6 +172,99 @@ test.describe("authenticated admin and season checks", () => {
     await page.screenshot({ path: "test-results/admin-users-mobile.png", fullPage: true });
   });
 
+  test("sharing clearly identifies the recipient and replaces copy feedback", async ({ page }) => {
+    const people = [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        fullName: "Casey Coach",
+        email: "casey@example.invalid",
+        isAdmin: true,
+        isOwner: false,
+        disabled: false,
+        lastSignIn: null,
+      },
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        fullName: "Morgan Coach",
+        email: "morgan@example.invalid",
+        isAdmin: true,
+        isOwner: false,
+        disabled: false,
+        lastSignIn: null,
+      },
+    ];
+    await page.route("**/api/admin/users*", async (route) => {
+      const req = route.request();
+      if (req.method() === "GET")
+        return route.fulfill({ json: { currentUserId: "owner", hasMore: false, users: people } });
+      const person = people.find((p) => p.id === req.postDataJSON().userId)!;
+      return route.fulfill({
+        json: {
+          recipient: person,
+          setupLink: `https://www.foxesgear.com/reset-password?token_hash=qa-${person.id}&type=recovery`,
+        },
+      });
+    });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText: () => Promise.reject(new Error("Clipboard unavailable")) },
+      });
+      document.execCommand = () => false;
+    });
+    await page.goto("/admin/users");
+    await page.getByRole("button", { name: "Share access with Casey Coach", exact: true }).click();
+    const first = page.getByRole("dialog", { name: "Share access with Casey Coach", exact: true });
+    await expect(first).toBeVisible();
+    await expect(first.getByText("FoxesGear has not emailed this invitation.")).toBeVisible();
+    const invitation = first.getByRole("textbox", { name: "Invitation for Casey Coach" });
+    expect(await invitation.inputValue()).toContain("casey@example.invalid");
+    const draft = new URL(
+      (await first.getByRole("link", { name: "Open email draft" }).getAttribute("href"))!,
+    );
+    expect(decodeURIComponent(draft.pathname)).toBe("casey@example.invalid");
+    expect(draft.searchParams.get("body")).toContain("casey@example.invalid");
+    await first.getByRole("button", { name: "Copy invitation", exact: true }).click();
+    await expect(first.getByRole("status")).toContainText("Invitation selected for Casey Coach");
+    expect(await invitation.evaluate((el) => (el as HTMLTextAreaElement).selectionStart)).toBe(0);
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: (text: string) => {
+            (window as unknown as { copiedText: string }).copiedText = text;
+            return Promise.resolve();
+          },
+        },
+      });
+    });
+    await first.getByRole("button", { name: "Copy invitation", exact: true }).click();
+    await expect(first.getByRole("status")).toContainText("Invitation copied for Casey Coach");
+    await expect(first.getByRole("status")).not.toContainText("selected");
+    expect(
+      await page.evaluate(() => (window as unknown as { copiedText: string }).copiedText),
+    ).toContain("casey@example.invalid");
+    await first.getByRole("button", { name: "Done", exact: true }).click();
+    await page.getByRole("button", { name: "Share access with Morgan Coach", exact: true }).click();
+    const second = page.getByRole("dialog", {
+      name: "Share access with Morgan Coach",
+      exact: true,
+    });
+    await expect(second).toBeVisible();
+    expect(
+      await second.getByRole("textbox", { name: "Invitation for Morgan Coach" }).inputValue(),
+    ).toContain("morgan@example.invalid");
+    await expect(second.getByRole("status")).toHaveCount(0);
+    await expect(second).not.toContainText("casey@example.invalid");
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(
+      await second.evaluate((el) => el.getBoundingClientRect().width <= window.innerWidth),
+    ).toBe(true);
+    await page.screenshot({ path: "test-results/share-access-mobile.png", fullPage: true });
+    await page.keyboard.press("Escape");
+    await expect(second).toHaveCount(0);
+  });
+
   test("create account, set own password, grant/revoke access, prevent self-lockout and cross-site changes", async ({
     page,
   }) => {
@@ -186,7 +279,8 @@ test.describe("authenticated admin and season checks", () => {
       await page.getByLabel("Full name", { exact: true }).fill("Disposable QA User");
       await page.getByLabel("Email", { exact: true }).fill(email);
       await page.getByRole("button", { name: "Create account and setup link" }).click();
-      const linkField = page.getByRole("textbox", { name: "Password setup link" });
+      await page.getByText("Show link only", { exact: true }).click();
+      const linkField = page.getByRole("textbox", { name: /^Password setup link for / });
       await expect(linkField).toBeVisible();
       const setupLink = await linkField.inputValue();
       const { data: profiles } = await service

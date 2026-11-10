@@ -118,7 +118,10 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   return NextResponse.json(
-    { setupLink: setupLink(data.properties.hashed_token, "invite") },
+    {
+      setupLink: setupLink(data.properties.hashed_token, "invite"),
+      recipient: { id: data.user.id, email: data.user.email ?? email.toLowerCase(), fullName },
+    },
     { status: 201, headers },
   );
 }
@@ -132,7 +135,7 @@ export async function PATCH(req: NextRequest) {
   if (input.action === "setup-link") {
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("is_disabled")
+      .select("full_name, is_disabled")
       .eq("id", input.userId)
       .maybeSingle();
     if (!profile || profile.is_disabled)
@@ -153,7 +156,14 @@ export async function PATCH(req: NextRequest) {
     if (error || !data.properties)
       return NextResponse.json({ error: "Could not create setup link" }, { status: 500 });
     return NextResponse.json(
-      { setupLink: setupLink(data.properties.hashed_token, "recovery") },
+      {
+        setupLink: setupLink(data.properties.hashed_token, "recovery"),
+        recipient: {
+          id: account.user.id,
+          email: account.user.email,
+          fullName: profile.full_name ?? "",
+        },
+      },
       { headers },
     );
   }

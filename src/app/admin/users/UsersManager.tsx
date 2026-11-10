@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { ShareAccessDialog, type SetupInvitation } from "./ShareAccessDialog";
 
 type UserRow = {
   id: string;
@@ -25,7 +26,7 @@ export function UsersManager() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [link, setLink] = useState("");
+  const [invitation, setInvitation] = useState<SetupInvitation | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/admin/users?page=${page}`, { cache: "no-store" });
@@ -59,7 +60,7 @@ export function UsersManager() {
     setBusy(true);
     setError("");
     setMessage("");
-    setLink("");
+    setInvitation(null);
     try {
       const res = await fetch("/api/admin/users", {
         method,
@@ -68,7 +69,7 @@ export function UsersManager() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save user");
-      if (data.setupLink) setLink(data.setupLink);
+      if (data.setupLink) setInvitation({ ...data.recipient, link: data.setupLink });
       else setMessage("User access updated.");
       if (method === "POST") {
         setEmail("");
@@ -129,8 +130,8 @@ export function UsersManager() {
           {busy ? "Saving…" : "Create account and setup link"}
         </Button>
         <p className="text-sm text-muted-foreground">
-          Share the private setup link directly with the person. They choose their own password. No
-          email is sent automatically.
+          After creating the account, you’ll get an invitation addressed to this person. Choose how
+          to share it; no email is sent automatically.
         </p>
       </form>
       {error && (
@@ -143,29 +144,12 @@ export function UsersManager() {
           {message}
         </p>
       )}
-      {link && (
-        <div className="space-y-3 rounded-lg border border-border p-4" role="status">
-          <h3 className="font-semibold">Private password-setup link</h3>
-          <p className="text-sm">
-            This expiring link gives access to the account. Share it only with the intended person.
-          </p>
-          <Input aria-label="Password setup link" value={link} readOnly />
-          <Button
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(link);
-                setMessage("Link copied.");
-              } catch {
-                setError("Select the link above and copy it.");
-              }
-            }}
-          >
-            Copy link
-          </Button>
-          <button className="ml-3 text-sm underline" onClick={() => setLink("")}>
-            Dismiss
-          </button>
-        </div>
+      {invitation && (
+        <ShareAccessDialog
+          key={invitation.link}
+          invitation={invitation}
+          onClose={() => setInvitation(null)}
+        />
       )}
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-left text-sm">
@@ -208,9 +192,10 @@ export function UsersManager() {
                     <button
                       className="underline disabled:opacity-40"
                       disabled={busy || u.disabled}
+                      aria-label={`Share access with ${u.fullName || u.email}`}
                       onClick={() => void change("PATCH", { action: "setup-link", userId: u.id })}
                     >
-                      Setup link
+                      Share access
                     </button>
                     {!u.isOwner && u.id !== currentId && (
                       <>
