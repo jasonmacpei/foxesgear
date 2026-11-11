@@ -40,6 +40,7 @@ test("anonymous users cannot read reports, users, admin RSC, or issue refunds", 
     "/admin",
     "/admin/orders",
     "/admin/reports",
+    "/admin/reports/fulfillment",
     "/admin/users",
     "/admin/seasons",
   ]) {
@@ -61,6 +62,22 @@ test("anonymous users cannot read reports, users, admin RSC, or issue refunds", 
     const res = await request.post(path, { headers: { Origin: baseURL }, data: {} });
     expect(res.status(), path).toBe(401);
   }
+});
+
+test("pickup changes require admin access and same origin", async ({ request }) => {
+  const pickup = await request.patch("/api/orders/11111111-1111-4111-8111-111111111111/pickup", {
+    headers: { Origin: baseURL },
+    data: {},
+  });
+  expect(pickup.status()).toBe(401);
+  expect(
+    (
+      await request.patch("/api/orders/invalid/pickup", {
+        headers: { Origin: "https://untrusted.example" },
+        data: {},
+      })
+    ).status(),
+  ).toBe(403);
 });
 
 test.describe("authenticated admin and season checks", () => {

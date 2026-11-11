@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.5.0 (2026-11-11)
+
+### Features
+
+* Add printable packing slips and group pickup checklists for paid live orders in the selected season.
+* Filter orders by group, pickup status or search, and print the orders shown.
+* Let admins mark and undo collection with a saved Atlantic-time pickup timestamp. Collection is tracked separately from payment and sales totals.
+
 ## 0.4.0 (2026-11-10)
 
 ### Features

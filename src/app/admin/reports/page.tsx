@@ -27,6 +27,18 @@ export default async function AdminReportsPage({
       </p>
       <div className="mb-6 flex flex-wrap gap-3">
         <a
+          href={`/admin/reports/fulfillment?season=${season.id}&view=packing`}
+          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+        >
+          Packing slips
+        </a>
+        <a
+          href={`/admin/reports/fulfillment?season=${season.id}&view=pickup`}
+          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+        >
+          Pickup checklist
+        </a>
+        <a
           href={`/api/reports/printer?season=${season.id}`}
           className="rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
         >

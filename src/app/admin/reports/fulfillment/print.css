@@ -1,0 +1,134 @@
+.fulfillment-report .paper-checkbox {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid currentColor;
+  vertical-align: middle;
+}
+.fulfillment-report .print-pickup-box,
+.fulfillment-report .packing-variant-inline {
+  display: none;
+}
+
+@media screen and (max-width: 639px) {
+  .fulfillment-report .packing-variant-column,
+  .fulfillment-report .pickup-table thead {
+    display: none;
+  }
+  .fulfillment-report .packing-variant-inline,
+  .fulfillment-report .pickup-table,
+  .fulfillment-report .pickup-table tbody,
+  .fulfillment-report .pickup-table tr,
+  .fulfillment-report .pickup-table td {
+    display: block;
+  }
+  .fulfillment-report .pickup-table tr {
+    padding: 0.75rem;
+  }
+  .fulfillment-report .pickup-table tr:first-child {
+    border-top: 0;
+  }
+  .fulfillment-report .pickup-table td {
+    padding: 0.25rem 0;
+  }
+  .fulfillment-report .pickup-table td:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .fulfillment-report .pickup-table td:last-child p {
+    margin-bottom: 0;
+  }
+}
+.fulfillment-report td,
+.fulfillment-report dd {
+  overflow-wrap: anywhere;
+}
+
+@media print {
+  @page {
+    size: auto;
+    margin: 14mm;
+  }
+  body:has(.fulfillment-report) {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+    --border: #aaa;
+    --muted-foreground: #333;
+  }
+  body:has(.fulfillment-report) header,
+  body:has(.fulfillment-report) footer,
+  body:has(.fulfillment-report) aside,
+  body:has(.fulfillment-report) main h1,
+  body:has(.fulfillment-report) nav,
+  body:has(.fulfillment-report) > div > div:has(> .container),
+  .fulfillment-report .report-controls {
+    display: none !important;
+  }
+  body:has(.fulfillment-report) .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+  body:has(.fulfillment-report) .grid:has(> section .fulfillment-report) {
+    display: block !important;
+  }
+  body:has(.fulfillment-report) main,
+  .fulfillment-report .report-output {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .fulfillment-report .packing-slip {
+    break-after: page;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .fulfillment-report .packing-slip:last-child {
+    break-after: auto;
+  }
+  .fulfillment-report table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  .fulfillment-report .packing-slip th:first-child {
+    width: 12%;
+  }
+  .fulfillment-report .packing-slip th:nth-child(2) {
+    width: 43%;
+  }
+  .fulfillment-report .packing-slip th:last-child {
+    width: 10%;
+  }
+  .fulfillment-report thead {
+    display: table-header-group;
+  }
+  .fulfillment-report tr {
+    break-inside: avoid;
+  }
+  .fulfillment-report .pickup-group h4 {
+    break-after: avoid;
+  }
+  .fulfillment-report .pickup-table-wrap {
+    overflow: visible;
+    border: none;
+  }
+  .fulfillment-report .pickup-table th:first-child {
+    width: 29%;
+  }
+  .fulfillment-report .pickup-table th:last-child {
+    width: 30%;
+  }
+  .fulfillment-report .pickup-table th,
+  .fulfillment-report .pickup-table td {
+    padding: 8px;
+  }
+  .fulfillment-report .print-pickup-box {
+    display: inline-block;
+  }
+}
